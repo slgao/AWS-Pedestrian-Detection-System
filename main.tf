@@ -14,3 +14,28 @@ module "subnet" {
   private_subnet_cidr_blocks = var.private_subnet_cidr_blocks
   availability_zones = var.availability_zones
 }
+
+module "internet_gateway" {
+  source = "./modules/internet_gateway"
+  vpc_id = module.vpc.vpc_id
+}
+
+module "route_table" {
+  source = "./modules/route_table"
+  vpc_id = module.vpc.vpc_id
+  internet_gateway_id = module.internet_gateway.internet_gateway_id
+  public_subnet_ids = module.subnet.public_subnet_ids
+  private_subnet_ids = module.subnet.private_subnet_ids
+}
+
+module "security_group" {
+  source = "./modules/security_group"
+  vpc_id = module.vpc.vpc_id
+}
+
+module "ec2_bastion" {
+  source = "./modules/ec2_bastion"
+  subnet_id = module.subnet.public_subnet_ids[0]
+  security_group_id = module.security_group.bastion_sg_id
+  key_name = var.key_name
+}
