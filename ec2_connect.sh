@@ -23,10 +23,5 @@ fi
 
 # Connect to EC2
 ssh -i "$pem_file" ec2-user@"$ec2_ip"
-#! /bin/bash
-
-ec2_ip="$1"
-chmod 400 labsuser.pem
-ssh -i labsuser.pem ec2-user@${ec2_ip}
 
 
