@@ -33,6 +33,12 @@ variable "key_name" {
   type        = string
 }
 
+variable "instance_type" {
+  description = "Type of the EC2 instance"
+  type        = string
+  default     = "t3.micro"
+}
+
 variable "db_name" {
   description = "RDS database name"
   type        = string
@@ -50,3 +56,4 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
