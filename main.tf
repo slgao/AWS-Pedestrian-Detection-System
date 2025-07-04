@@ -39,6 +39,13 @@ module "ec2_bastion" {
   security_group_id = module.security_group.bastion_sg_id
   key_name          = var.key_name
   instance_type     = var.instance_type
+  db_name           = var.db_name
+  db_username       = var.db_username
+  db_password       = var.db_password
+  wp_db_name        = var.wp_db_name
+  wp_username       = var.wp_username
+  wp_password       = var.wp_password
+  rds_endpoint      = module.rds.rds_endpoint
 }
 
 module "ec2_frontend" {
@@ -48,7 +55,12 @@ module "ec2_frontend" {
   key_name          = var.key_name
   instance_type     = var.instance_type
   ami               = module.ec2_bastion.ami
-  user_data         = file("${path.module}/scripts/frontend_setup.sh")
+  user_data = templatefile("${path.module}/scripts/frontend_setup.sh", {
+    rds_endpoint = module.rds.rds_endpoint
+    wp_db_name   = var.wp_db_name
+    wp_username  = var.wp_username
+    wp_password  = var.wp_password
+  })
 }
 
 module "ec2_backend" {
@@ -58,5 +70,21 @@ module "ec2_backend" {
   key_name          = var.key_name
   instance_type     = var.instance_type
   ami               = module.ec2_bastion.ami
+  rds_endpoint      = module.rds.rds_endpoint
 }
 
+module "rds" {
+  source                 = "./modules/rds"
+  subnet_ids             = module.subnet.private_subnet_ids
+  security_group_id      = module.security_group.rds_sg_id
+  db_instance_identifier = var.db_instance_identifier
+  db_engine              = var.db_engine
+  db_engine_version      = var.db_engine_version
+  db_instance_class      = var.db_instance_class
+  allocated_storage      = var.allocated_storage
+  skip_final_snapshot    = var.skip_final_snapshot
+  multi_az               = var.db_multi_az
+  db_name                = var.db_name
+  db_username            = var.db_username
+  db_password            = var.db_password
+}

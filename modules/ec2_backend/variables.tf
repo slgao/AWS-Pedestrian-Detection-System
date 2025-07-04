@@ -1,4 +1,4 @@
- variable "subnet_id" {
+variable "subnet_id" {
   description = "ID of the subnet"
   type        = string
 }
@@ -24,3 +24,7 @@ variable "ami" {
   type        = string
 }
 
+variable "rds_endpoint" {
+  description = "RDS endpoint URL"
+  type        = string
+}

@@ -14,8 +14,8 @@ sudo cp -r wordpress/* .
 sudo rm -rf wordpress latest.zip
 sudo chown -R apache:apache /var/www/html
 sudo cp wp-config-sample.php wp-config.php
-sudo sed -i "s/database_name_here/wordpress/" wp-config.php
-sudo sed -i "s/username_here/wpuser/" wp-config.php
-sudo sed -i "s/password_here/wp-password123!/" wp-config.php
-sudo sed -i "s/localhost/$rds_endpoint/" wp-config.php
+sudo sed -i "s/database_name_here/${wp_db_name}/" wp-config.php
+sudo sed -i "s/username_here/${wp_username}/" wp-config.php
+sudo sed -i "s/password_here/${wp_password}/" wp-config.php
+sudo sed -i "s/localhost/${rds_endpoint}/" wp-config.php
 sudo systemctl restart httpd

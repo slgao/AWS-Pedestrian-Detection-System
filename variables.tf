@@ -39,10 +39,52 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "db_instance_identifier" {
+  description = "RDS instance identifier"
+  type        = string
+  default     = "mydb-instance"
+}
+
+variable "db_engine" {
+  description = "RDS database engine"
+  type        = string
+  default     = "mysql"
+}
+
+variable "db_engine_version" {
+  description = "RDS database engine version"
+  type        = string
+  default     = "8.0"
+}
+
+variable "db_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "allocated_storage" {
+  description = "Allocated storage for RDS instance in GB"
+  type        = number
+  default     = 20
+}
+
+variable "db_multi_az" {
+  description = "Enable Multi-AZ for RDS"
+  type        = bool
+  default     = true
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot when deleting RDS instance"
+  type        = bool
+  default     = true
+}
+
 variable "db_name" {
   description = "RDS database name"
   type        = string
-  default     = "mydb"
+  default     = "wordpress"
 }
 
 variable "db_username" {
@@ -57,3 +99,20 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "wp_db_name" {
+  description = "WordPress database name"
+  type        = string
+  default     = "wordpress"
+}
+
+variable "wp_username" {
+  description = "WordPress admin username"
+  type        = string
+  default     = "wpuser"
+}
+
+variable "wp_password" {
+  description = "WordPress admin password"
+  type        = string
+  sensitive   = true
+}
