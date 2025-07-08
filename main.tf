@@ -50,17 +50,30 @@ module "ec2_bastion" {
 
 module "ec2_frontend" {
   source            = "./modules/ec2_frontend"
-  subnet_id         = module.subnet.public_subnet_ids[1]
   security_group_id = module.security_group.frontend_sg_id
   key_name          = var.key_name
   instance_type     = var.instance_type
   ami               = module.ec2_bastion.ami
-  user_data = templatefile("${path.module}/scripts/frontend_setup.sh", {
+  user_data = base64encode(templatefile("${path.module}/scripts/frontend_setup.sh", {
     rds_endpoint = module.rds.rds_endpoint
     wp_db_name   = var.wp_db_name
     wp_username  = var.wp_username
     wp_password  = var.wp_password
-  })
+  }))
+}
+
+module "autoscaling" {
+  source             = "./modules/autoscaling"
+  launch_template_id = module.ec2_frontend.launch_template_id
+  subnet_ids         = module.subnet.public_subnet_ids
+  target_group_arn   = module.load_balancer.target_group_arn
+}
+
+module "load_balancer" {
+  source            = "./modules/load_balancer"
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.subnet.public_subnet_ids
+  security_group_id = module.security_group.alb_sg_id
 }
 
 module "ec2_backend" {
