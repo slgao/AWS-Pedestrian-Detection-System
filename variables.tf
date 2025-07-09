@@ -116,3 +116,14 @@ variable "wp_password" {
   type        = string
   sensitive   = true
 }
+
+variable "lambda_role_name" {
+  description = "Name of the existing IAM role for Lambda execution"
+  type        = string
+  default     = "LabRole" # Replace with your lab's role name
+}
+
+variable "s3_bucket_name" {
+  description = "Name of the existing S3 bucket"
+  type        = string
+}

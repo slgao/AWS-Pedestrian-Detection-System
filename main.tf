@@ -2,6 +2,11 @@ provider "aws" {
   region = var.region
 }
 
+# Retrieve existing IAM role ARN
+data "aws_iam_role" "lambda_role" {
+  name = var.lambda_role_name
+}
+
 module "vpc" {
   source   = "./modules/vpc"
   vpc_cidr = var.vpc_cidr
@@ -101,3 +106,23 @@ module "rds" {
   db_username            = var.db_username
   db_password            = var.db_password
 }
+
+
+module "sns" {
+  source = "./modules/sns"
+}
+
+module "s3" {
+  source        = "./modules/s3"
+  bucket_name = var.s3_bucket_name
+  sns_topic_arn = module.sns.sns_topic_arn
+}
+
+module "lambda_rekognition" {
+  source        = "./modules/lambda_rekognition"
+  sns_topic_arn = module.sns.sns_topic_arn
+  bucket_name   = module.s3.bucket_name
+  lambda_role_arn = data.aws_iam_role.lambda_role.arn
+}
+
+
