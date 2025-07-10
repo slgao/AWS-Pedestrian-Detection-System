@@ -34,3 +34,15 @@ output "bucket_name" {
 output "aws_iam_role_arn" {
   value = data.aws_iam_role.lambda_role.arn
 }
+
+# Frontend hosting outputs
+# Temporarily commented out due to S3 permission issues
+# output "frontend_bucket_name" {
+#   description = "Name of the frontend S3 bucket"
+#   value       = module.frontend_hosting.frontend_bucket_name
+# }
+
+# output "frontend_website_url" {
+#   description = "Website URL for the frontend"
+#   value       = "http://${module.frontend_hosting.frontend_website_endpoint}"
+# }

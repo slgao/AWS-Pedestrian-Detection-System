@@ -64,6 +64,12 @@ module "ec2_frontend" {
     wp_db_name   = var.wp_db_name
     wp_username  = var.wp_username
     wp_password  = var.wp_password
+    # user_data = base64encode(templatefile("${path.module}/scripts/react_frontend_setup.sh", {
+    #   rds_endpoint     = module.rds.rds_endpoint
+    #   wp_db_name       = var.wp_db_name
+    #   wp_username      = var.wp_username
+    #   wp_password      = var.wp_password
+    #   s3_bucket_name   = var.s3_bucket_name
   }))
 }
 
@@ -107,22 +113,26 @@ module "rds" {
   db_password            = var.db_password
 }
 
-
 module "sns" {
   source = "./modules/sns"
 }
 
 module "s3" {
   source        = "./modules/s3"
-  bucket_name = var.s3_bucket_name
+  bucket_name   = var.s3_bucket_name
   sns_topic_arn = module.sns.sns_topic_arn
 }
 
 module "lambda_rekognition" {
-  source        = "./modules/lambda_rekognition"
-  sns_topic_arn = module.sns.sns_topic_arn
-  bucket_name   = module.s3.bucket_name
+  source          = "./modules/lambda_rekognition"
+  sns_topic_arn   = module.sns.sns_topic_arn
+  bucket_name     = module.s3.bucket_name
   lambda_role_arn = data.aws_iam_role.lambda_role.arn
 }
 
-
+# Frontend hosting module (simplified for lab environment)
+# Temporarily commented out due to S3 permission issues
+# module "frontend_hosting" {
+#   source               = "./modules/frontend_hosting_simple"
+#   frontend_bucket_name = var.frontend_bucket_name
+# }

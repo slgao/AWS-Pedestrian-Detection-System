@@ -1,17 +1,13 @@
-# Workaround, use data source for existing bucket
-data "aws_s3_bucket" "image_bucket" {
-  bucket = var.bucket_name
-}
-
+# Use bucket name directly to avoid permission issues
 resource "aws_s3_bucket_ownership_controls" "image_bucket" {
-  bucket = data.aws_s3_bucket.image_bucket.id
+  bucket = var.bucket_name
   rule {
     object_ownership = "BucketOwnerEnforced"
   }
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
-  bucket = data.aws_s3_bucket.image_bucket.id
+  bucket = var.bucket_name
   topic {
     topic_arn     = var.sns_topic_arn
     events        = ["s3:ObjectCreated:*"]
@@ -35,7 +31,7 @@ resource "aws_sns_topic_policy" "s3_publish" {
         Resource = var.sns_topic_arn
         Condition = {
           ArnLike = {
-            "aws:SourceArn" = data.aws_s3_bucket.image_bucket.arn
+            "aws:SourceArn" = "arn:aws:s3:::${var.bucket_name}"
           }
         }
       }
