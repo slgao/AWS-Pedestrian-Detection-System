@@ -16,7 +16,8 @@ resource "aws_lb_target_group" "frontend" {
   protocol = "HTTP"
   vpc_id   = var.vpc_id
   health_check {
-    path                = "/wp-includes/images/blank.gif"
+    # path                = "/wp-includes/images/blank.gif"
+    path                = "/health"
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2

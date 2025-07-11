@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedestrian Detection System - AWS 3-Tier Architecture</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover { transform: translateY(-5px); }
+        
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover { background: #e9ecef; }
+        .upload-area.dragover { border-color: #764ba2; background: #e3f2fd; }
+        
+        #fileInput { display: none; }
+        
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .image-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .image-item:hover { transform: scale(1.02); }
+        
+        .image-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .image-container img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        
+        .bounding-box {
+            position: absolute;
+            border: 3px solid #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            pointer-events: none;
+        }
+        
+        .bounding-box-label {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            background: #ff4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .image-info {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .labels {
+            margin-top: 10px;
+        }
+        
+        .label-tag {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-top: 40px;
+        }
+        
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .loading { color: #ffc107; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        
+        .modal-content {
+            position: relative;
+            margin: 5% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 800px;
+            background: white;
+            border-radius: 15px;
+        }
+        
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚶‍♂️ Pedestrian Detection System</h1>
+            <p>AWS 3-Tier Architecture with AI-Powered Image Recognition</p>
+        </div>
+        
+        <div class="cards">
+            <div class="card">
+                <h3>🖼️ Image Recognition</h3>
+                <p>Upload images to analyze with AWS Rekognition for pedestrian detection.</p>
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <p>📁 Click or drag images here to upload</p>
+                    <input type="file" id="fileInput" accept="image/*" multiple>
+                </div>
+                <div id="uploadResults" class="results"></div>
+                <div id="imageGallery" class="image-gallery"></div>
+            </div>
+            
+            <div class="card">
+                <h3>🔧 System Information</h3>
+                <p>Real-time information about this instance and deployment.</p>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <strong>Instance ID</strong>
+                        <div id="instanceId">Loading...</div>
+                    </div>
+                    <div class="status-item">
+                        <strong>Availability Zone</strong>
+                        <div id="availabilityZone">Loading...</div>
+                    </div>
+                    <div class="status-item">
+                        <strong>Health Status</strong>
+                        <div id="healthStatus">Checking...</div>
+                    </div>
+                    <div class="status-item">
+                        <strong>API Status</strong>
+                        <div id="apiStatus">Checking...</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="refreshSystemInfo()">🔄 Refresh Info</button>
+            </div>
+            
+            <div class="card">
+                <h3>📊 Infrastructure Status</h3>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <strong>Load Balancer</strong>
+                        <span>✅ Active</span>
+                    </div>
+                    <div class="status-item">
+                        <strong>Auto Scaling</strong>
+                        <span>✅ Healthy</span>
+                    </div>
+                    <div class="status-item">
+                        <strong>Database</strong>
+                        <span>✅ Connected</span>
+                    </div>
+                    <div class="status-item">
+                        <strong>S3 Storage</strong>
+                        <span id="s3Status">✅ Available</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🚀 Deployed with Terraform | Auto Scaling Group | Load Balanced</p>
+        </div>
+    </div>
+
+    <!-- Modal for image details -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let systemData = {};
+        let uploadedImages = [];
+        const API_BASE = '/api';
+        
+        // Load system information
+        async function loadSystemInfo() {
+            try {
+                console.log('Loading system info...');
+                const response = await fetch('/deployment-info.json');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                systemData = await response.json();
+                console.log('System data loaded:', systemData);
+                
+                document.getElementById('instanceId').textContent = systemData.instanceId || 'Unknown';
+                document.getElementById('availabilityZone').textContent = systemData.availabilityZone || 'Unknown';
+                
+            } catch (error) {
+                console.error('Failed to load system info:', error);
+                document.getElementById('instanceId').innerHTML = '<span class="error">Failed to load</span>';
+                document.getElementById('availabilityZone').innerHTML = '<span class="error">Failed to load</span>';
+            }
+        }
+        
+        function refreshSystemInfo() {
+            console.log('Refreshing system info...');
+            loadSystemInfo();
+            checkHealth();
+            checkApiHealth();
+        }
+        
+        // Health check
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                
+                if (response.ok) {
+                    document.getElementById('healthStatus').innerHTML = '<span class="success">✅ Healthy</span>';
+                } else {
+                    document.getElementById('healthStatus').innerHTML = '<span class="error">⚠️ Warning</span>';
+                }
+            } catch (error) {
+                console.error('Health check failed:', error);
+                document.getElementById('healthStatus').innerHTML = '<span class="error">❌ Error</span>';
+            }
+        }
+        
+        // API health check
+        async function checkApiHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                
+                if (response.ok) {
+                    document.getElementById('apiStatus').innerHTML = '<span class="success">✅ API Ready</span>';
+                } else {
+                    document.getElementById('apiStatus').innerHTML = '<span class="error">⚠️ API Warning</span>';
+                }
+            } catch (error) {
+                console.error('API health check failed:', error);
+                document.getElementById('apiStatus').innerHTML = '<span class="error">❌ API Down</span>';
+            }
+        }
+        
+        // File upload handling
+        const uploadArea = document.querySelector('.upload-area');
+        const fileInput = document.getElementById('fileInput');
+        const uploadResults = document.getElementById('uploadResults');
+        const imageGallery = document.getElementById('imageGallery');
+        
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            uploadResults.style.display = 'block';
+            uploadResults.innerHTML = '<div class="loading">📤 Uploading images to S3 and processing with AWS Rekognition...</div>';
+            
+            try {
+                const formData = new FormData();
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+                
+                const response = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    uploadedImages = [...uploadedImages, ...result.files];
+                    displayUploadResults(result);
+                    displayImageGallery();
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+                
+            } catch (error) {
+                console.error('Upload failed:', error);
+                uploadResults.innerHTML = `<div class="error">❌ Upload failed: ${error.message}</div>`;
+            }
+        }
+        
+        function displayUploadResults(result) {
+            const successCount = result.files.filter(f => f.status === 'uploaded').length;
+            const failCount = result.files.filter(f => f.status === 'failed').length;
+            
+            uploadResults.innerHTML = `
+                <div class="success">✅ ${successCount} images uploaded and processed successfully!</div>
+                ${failCount > 0 ? `<div class="error">❌ ${failCount} images failed to upload</div>` : ''}
+                <div>Click on images below to see detection results and bounding boxes.</div>
+            `;
+        }
+        
+        async function displayImageGallery() {
+            imageGallery.innerHTML = '';
+            
+            for (const image of uploadedImages) {
+                if (image.status !== 'uploaded') continue;
+                
+                try {
+                    // Get presigned URL for image
+                    const urlResponse = await fetch(`${API_BASE}/image/${encodeURIComponent(image.s3Key)}`);
+                    const urlData = await urlResponse.json();
+                    
+                    if (!urlData.success) continue;
+                    
+                    const imageElement = createImageElement(image, urlData.url);
+                    imageGallery.appendChild(imageElement);
+                } catch (error) {
+                    console.error('Failed to load image:', error);
+                }
+            }
+        }
+        
+        function createImageElement(imageData, imageUrl) {
+            const div = document.createElement('div');
+            div.className = 'image-item';
+            div.onclick = () => showImageModal(imageData, imageUrl);
+            
+            const rekognition = imageData.rekognition || {};
+            const peopleCount = rekognition.peopleCount || 0;
+            const boundingBoxes = rekognition.boundingBoxes || [];
+            
+            div.innerHTML = `
+                <div class="image-container">
+                    <img src="${imageUrl}" alt="${imageData.originalName}" onload="drawBoundingBoxes(this, ${JSON.stringify(boundingBoxes).replace(/"/g, '&quot;')})">
+                </div>
+                <div class="image-info">
+                    <strong>${imageData.originalName}</strong><br>
+                    👥 People detected: ${peopleCount}<br>
+                    📦 Bounding boxes: ${boundingBoxes.length}
+                </div>
+                <div class="labels">
+                    ${(rekognition.labels || []).slice(0, 5).map(label => 
+                        `<span class="label-tag">${label.Name} (${Math.round(label.Confidence)}%)</span>`
+                    ).join('')}
+                </div>
+            `;
+            
+            return div;
+        }
+        
+        function drawBoundingBoxes(img, boundingBoxes) {
+            const container = img.parentElement;
+            
+            // Remove existing bounding boxes
+            container.querySelectorAll('.bounding-box').forEach(box => box.remove());
+            
+            boundingBoxes.forEach(box => {
+                const bbox = box.boundingBox;
+                const boxElement = document.createElement('div');
+                boxElement.className = 'bounding-box';
+                
+                // Calculate position and size based on image dimensions
+                const imgRect = img.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                
+                const left = bbox.Left * img.offsetWidth;
+                const top = bbox.Top * img.offsetHeight;
+                const width = bbox.Width * img.offsetWidth;
+                const height = bbox.Height * img.offsetHeight;
+                
+                boxElement.style.left = left + 'px';
+                boxElement.style.top = top + 'px';
+                boxElement.style.width = width + 'px';
+                boxElement.style.height = height + 'px';
+                
+                // Add label
+                const label = document.createElement('div');
+                label.className = 'bounding-box-label';
+                label.textContent = `${box.label} (${Math.round(box.confidence)}%)`;
+                boxElement.appendChild(label);
+                
+                container.appendChild(boxElement);
+            });
+        }
+        
+        function showImageModal(imageData, imageUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            const rekognition = imageData.rekognition || {};
+            
+            modalContent.innerHTML = `
+                <h2>${imageData.originalName}</h2>
+                <div class="image-container" style="max-width: 100%; margin: 20px 0;">
+                    <img src="${imageUrl}" style="width: 100%; max-height: 400px; object-fit: contain;" 
+                         onload="drawBoundingBoxes(this, ${JSON.stringify(rekognition.boundingBoxes || []).replace(/"/g, '&quot;')})">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h3>Detection Results</h3>
+                        <p><strong>People Count:</strong> ${rekognition.peopleCount || 0}</p>
+                        <p><strong>Bounding Boxes:</strong> ${(rekognition.boundingBoxes || []).length}</p>
+                        <p><strong>Processed:</strong> ${rekognition.processedAt ? new Date(rekognition.processedAt).toLocaleString() : 'N/A'}</p>
+                    </div>
+                    <div>
+                        <h3>All Labels</h3>
+                        <div class="labels">
+                            ${(rekognition.labels || []).map(label => 
+                                `<span class="label-tag">${label.Name} (${Math.round(label.Confidence)}%)</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('imageModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, initializing...');
+            loadSystemInfo();
+            checkHealth();
+            checkApiHealth();
+        });
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            checkHealth();
+            checkApiHealth();
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,15 +1,10 @@
-data "aws_ami" "amazon_linux_2" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
-  owners = ["amazon"]
+# Reference AMI data module
+module "ami_data" {
+  source = "../ami_data"
 }
 
 resource "aws_instance" "bastion" {
-  ami                    = data.aws_ami.amazon_linux_2.id
+  ami                    = var.use_amazon_linux_2023 ? module.ami_data.amazon_linux_2023_id : module.ami_data.amazon_linux_2_id
   instance_type          = var.instance_type
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [var.security_group_id]
@@ -55,4 +50,3 @@ tags = {
   Name = "bastion-host"
 }
 }
-

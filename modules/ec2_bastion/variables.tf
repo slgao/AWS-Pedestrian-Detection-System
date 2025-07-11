@@ -19,6 +19,12 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "use_amazon_linux_2023" {
+  description = "Whether to use Amazon Linux 2023 (true) or Amazon Linux 2 (false)"
+  type        = bool
+  default     = false  # Default to AL2 for bastion since it uses amazon-linux-extras
+}
+
 variable "db_name" {
   description = "RDS database name for WordPress"
   type        = string
