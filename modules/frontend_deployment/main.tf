@@ -18,13 +18,18 @@ locals {
 }
 
 # Launch template for frontend instances
-resource "aws_launch_template" "react_frontend" {
-  name                   = "react-frontend-launch-template"
+resource "aws_launch_template" "frontend_app" {
+  name                   = "frontend-app-launch-template"
   image_id               = var.use_amazon_linux_2023 ? module.ami_data.amazon_linux_2023_id : module.ami_data.amazon_linux_2_id
   instance_type          = var.instance_type
   key_name               = var.key_name
   vpc_security_group_ids = var.security_group_ids
   user_data              = local.user_data_script
+
+  # Add IAM instance profile for AWS service access
+  iam_instance_profile {
+    name = "LabInstanceProfile"
+  }
 
   # # Increase EBS volume size to accommodate dependencies
   # block_device_mappings {
@@ -42,7 +47,7 @@ resource "aws_launch_template" "react_frontend" {
     tags = {
       Name        = var.instance_name
       Environment = var.environment
-      AppType     = "react-frontend"
+      AppType     = "frontend-app"
     }
   }
 

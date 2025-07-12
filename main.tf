@@ -54,9 +54,9 @@ module "security_group" {
 #   rds_endpoint      = module.rds.rds_endpoint
 # }
 
-# React App Deployment Module
-module "react_deployment" {
-  source = "./modules/react_deployment"
+# Frontend App Deployment Module
+module "frontend_deployment" {
+  source = "./modules/frontend_deployment"
   
   gitlab_repo_url     = var.gitlab_repo_url
   s3_bucket_name      = var.s3_bucket_name
@@ -95,11 +95,11 @@ module "react_deployment" {
 
 module "autoscaling" {
   source             = "./modules/autoscaling"
-  launch_template_id = module.react_deployment.launch_template_id
+  launch_template_id = module.frontend_deployment.launch_template_id
   subnet_ids         = module.subnet.public_subnet_ids
   target_group_arn   = module.load_balancer.target_group_arn
   
-  depends_on = [module.react_deployment]
+  depends_on = [module.frontend_deployment]
 }
 
 module "load_balancer" {

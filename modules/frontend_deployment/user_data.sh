@@ -82,8 +82,13 @@ http {
 }
 EOF
 
-# Create Flask API
-sudo tee /opt/app.py > /dev/null << 'EOF'
+# Setup Flask API - use from simple-frontend if available
+if [ -f /var/www/html/app.py ]; then
+    sudo cp /var/www/html/app.py /opt/app.py
+    echo "Using Flask API from simple-frontend" >> $LOG
+else
+    # Create fallback Flask API with proper health endpoint
+    sudo tee /opt/app.py > /dev/null << 'EOF'
 #!/usr/bin/env python3
 import os,json,uuid
 from datetime import datetime
@@ -122,11 +127,17 @@ def get_url(key):
 
 @app.route('/api/health')
 def health():
-    return jsonify({'status':'healthy','timestamp':datetime.utcnow().isoformat()})
+    return jsonify({'status':'healthy-fallback-flask','timestamp':datetime.utcnow().isoformat(),'bucket':BUCKET})
+
+@app.route('/api/config')
+def config():
+    return jsonify({'s3Bucket':BUCKET,'region':'us-west-2'})
 
 if __name__=='__main__':
     app.run(host='0.0.0.0',port=5000,debug=False)
 EOF
+    echo "Using fallback Flask API" >> $LOG
+fi
 
 # Create systemd service
 sudo tee /etc/systemd/system/flask-api.service > /dev/null << 'EOF'
@@ -148,9 +159,15 @@ EOF
 sudo nginx -t && sudo systemctl enable nginx && sudo systemctl start nginx
 sudo systemctl daemon-reload && sudo systemctl enable flask-api && sudo systemctl start flask-api
 
-# Create deployment info
-INSTANCE_ID=$(curl -s --connect-timeout 5 http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || echo "unknown")
-AZ=$(curl -s --connect-timeout 5 http://169.254.169.254/latest/meta-data/placement/availability-zone 2>/dev/null || echo "unknown")
+# Create deployment info - EC2 instance enforces IMDSv2 and won't accept the older IMDSv1 call.
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/instance-id)
+
+AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/placement/availability-zone)
 
 sudo tee /var/www/html/deployment-info.json > /dev/null << EOF
 {
