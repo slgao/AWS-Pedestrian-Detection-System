@@ -15,7 +15,97 @@
             min-height: 100vh;
         }
         
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .primary-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 3px solid #667eea;
+        }
+        
+        .primary-section h2 {
+            color: #667eea;
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .primary-section .subtitle {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .sidebar-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-left: 4px solid #28a745;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+        }
+        
+        .sidebar-card h3 {
+            color: #495057;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sidebar-card:nth-child(2) {
+            border-left-color: #17a2b8;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .sidebar {
+                flex-direction: row;
+                gap: 15px;
+            }
+            
+            .sidebar-card {
+                flex: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                flex-direction: column;
+            }
+        }
         
         .header {
             text-align: center;
@@ -68,18 +158,62 @@
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         
         .upload-area {
-            border: 2px dashed #667eea;
+            border: 3px dashed #667eea;
             border-radius: 15px;
             padding: 40px;
             text-align: center;
-            background: #f8f9fa;
-            margin-top: 20px;
             cursor: pointer;
             transition: all 0.3s ease;
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
+            margin: 20px 0 30px 0;
+            position: relative;
+            overflow: hidden;
         }
         
-        .upload-area:hover { background: #e9ecef; }
-        .upload-area.dragover { border-color: #764ba2; background: #e3f2fd; }
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s ease;
+            opacity: 0;
+        }
+        
+        .upload-area:hover::before {
+            opacity: 1;
+            animation: shimmer 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .upload-area:hover {
+            border-color: #5a67d8;
+            background: linear-gradient(135deg, #f0f4ff 0%, #dde7ff 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+        
+        .upload-area p {
+            font-size: 1.2rem;
+            color: #667eea;
+            font-weight: 600;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .upload-area.dragover { 
+            border-color: #764ba2; 
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            transform: scale(1.02);
+        }
         
         #fileInput { display: none; }
         
@@ -105,11 +239,95 @@
             border-radius: 10px;
         }
         
+        .status-footer {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .refresh-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .success { color: #28a745; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { color: #17a2b8; font-weight: bold; }
+        
         .image-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
             margin-top: 20px;
+        }
+        
+        .gallery-section {
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .gallery-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.3s ease;
+        }
+        
+        .gallery-header:hover {
+            background: #e9ecef;
+        }
+        
+        .gallery-header h4 {
+            margin: 0;
+            color: #495057;
+            font-size: 1.1rem;
+        }
+        
+        .gallery-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-toggle.expanded {
+            transform: rotate(180deg);
+        }
+        
+        .gallery-content {
+            padding: 20px;
+            display: none;
+        }
+        
+        .gallery-content.expanded {
+            display: block;
+        }
+        
+        .recent-uploads {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .older-uploads {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
         }
         
         .image-item {
@@ -118,10 +336,43 @@
             padding: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             cursor: pointer;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
         }
         
-        .image-item:hover { transform: scale(1.02); }
+        .image-item:hover { 
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+        
+        .recent-uploads .image-item {
+            border-left: 4px solid #28a745;
+            position: relative;
+        }
+        
+        .recent-uploads .image-item::before {
+            content: "NEW";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            z-index: 2;
+        }
+        
+        .older-uploads .image-item {
+            border-left: 4px solid #6c757d;
+            opacity: 0.9;
+        }
+        
+        .older-uploads .image-item:hover {
+            opacity: 1;
+        }
         
         .image-container {
             position: relative;
@@ -131,28 +382,102 @@
         
         .image-container img {
             width: 100%;
-            height: 200px;
-            object-fit: cover;
+            height: auto;
+            max-height: 300px;
+            object-fit: contain;
             border-radius: 8px;
+            display: block;
         }
         
         .bounding-box {
             position: absolute;
-            border: 3px solid #ff4444;
-            background: rgba(255, 68, 68, 0.1);
             pointer-events: none;
+            z-index: 10;
+            box-sizing: border-box;
+        }
+        
+        .bounding-box.person {
+            border: 1px solid #ff4444;
+            background: rgba(255, 68, 68, 0.05);
+        }
+        
+        .bounding-box.face {
+            border: 1px solid #44ff44;
+            background: rgba(68, 255, 68, 0.05);
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease;
+            z-index: 15;
+        }
+        
+        .bounding-box.face:hover {
+            border-color: #00ff00;
+            border-width: 2px;
+            background: rgba(68, 255, 68, 0.15);
+            transform: scale(1.02);
+            box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
         }
         
         .bounding-box-label {
             position: absolute;
-            top: -25px;
+            top: -20px;
             left: 0;
-            background: #ff4444;
             color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 11px;
             font-weight: bold;
+            white-space: nowrap;
+            z-index: 11;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        .bounding-box.person .bounding-box-label {
+            background: rgba(255, 68, 68, 0.8);
+        }
+        
+        .bounding-box.face .bounding-box-label {
+            background: rgba(68, 255, 68, 0.8);
+            color: #000;
+        }
+        
+        .face-zoom-preview {
+            position: fixed;
+            z-index: 2000;
+            pointer-events: none;
+            border: 2px solid #44ff44;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            background: white;
+            padding: 8px;
+            max-width: 280px;
+            min-width: 200px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .face-zoom-preview img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            display: block;
+        }
+        
+        .face-zoom-info {
+            padding: 8px 0;
+            font-size: 11px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            margin-top: 8px;
+            padding: 8px;
+            line-height: 1.4;
+        }
+        
+        .face-zoom-info div {
+            margin: 2px 0;
+        }
+        
+        .face-zoom-info strong {
+            color: #333;
         }
         
         .image-info {
@@ -223,10 +548,12 @@
             <p>AWS 3-Tier Architecture with AI-Powered Image Recognition</p>
         </div>
         
-        <div class="cards">
-            <div class="card">
-                <h3>🖼️ Image Recognition</h3>
-                <p>Upload images to analyze with AWS Rekognition for pedestrian detection.</p>
+        <div class="main-layout">
+            <!-- Primary Image Recognition Section (2/3 width) -->
+            <div class="primary-section">
+                <h2>🖼️ AI Image Recognition</h2>
+                <p class="subtitle">Upload images to analyze with AWS Rekognition for advanced pedestrian detection and facial recognition. Get real-time results with bounding boxes and confidence scores.</p>
+                
                 <div class="upload-area" onclick="document.getElementById('fileInput').click()">
                     <p>📁 Click or drag images here to upload</p>
                     <input type="file" id="fileInput" accept="image/*" multiple>
@@ -235,48 +562,50 @@
                 <div id="imageGallery" class="image-gallery"></div>
             </div>
             
-            <div class="card">
-                <h3>🔧 System Information</h3>
-                <p>Real-time information about this instance and deployment.</p>
-                <div class="status-grid">
-                    <div class="status-item">
-                        <strong>Instance ID</strong>
-                        <div id="instanceId">Loading...</div>
+            <!-- Sidebar with System Info and Infrastructure Status (1/3 width) -->
+            <div class="sidebar">
+                <div class="sidebar-card">
+                    <h3>🔧 System Information</h3>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <strong>Instance ID</strong>
+                            <div id="instanceId">Loading...</div>
+                        </div>
+                        <div class="status-item">
+                            <strong>Availability Zone</strong>
+                            <div id="availabilityZone">Loading...</div>
+                        </div>
+                        <div class="status-item">
+                            <strong>Health Status</strong>
+                            <div id="healthStatus">Checking...</div>
+                        </div>
+                        <div class="status-item">
+                            <strong>API Status</strong>
+                            <div id="apiStatus">Checking...</div>
+                        </div>
                     </div>
-                    <div class="status-item">
-                        <strong>Availability Zone</strong>
-                        <div id="availabilityZone">Loading...</div>
-                    </div>
-                    <div class="status-item">
-                        <strong>Health Status</strong>
-                        <div id="healthStatus">Checking...</div>
-                    </div>
-                    <div class="status-item">
-                        <strong>API Status</strong>
-                        <div id="apiStatus">Checking...</div>
-                    </div>
+                    <button class="btn" onclick="refreshSystemInfo()">🔄 Refresh Info</button>
                 </div>
-                <button class="btn" onclick="refreshSystemInfo()">🔄 Refresh Info</button>
-            </div>
-            
-            <div class="card">
-                <h3>📊 Infrastructure Status</h3>
-                <div class="status-grid">
-                    <div class="status-item">
-                        <strong>Load Balancer</strong>
-                        <span>✅ Active</span>
+                
+                <div class="sidebar-card">
+                    <h3>📊 Infrastructure Status</h3>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <strong>S3 Storage</strong>
+                            <div id="s3Status">🔄 Checking...</div>
+                        </div>
+                        <div class="status-item">
+                            <strong>Rekognition AI</strong>
+                            <div id="rekognitionStatus">🔄 Checking...</div>
+                        </div>
+                        <div class="status-item">
+                            <strong>System Resources</strong>
+                            <div id="systemStatus">🔄 Checking...</div>
+                        </div>
                     </div>
-                    <div class="status-item">
-                        <strong>Auto Scaling</strong>
-                        <span>✅ Healthy</span>
-                    </div>
-                    <div class="status-item">
-                        <strong>Database</strong>
-                        <span>✅ Connected</span>
-                    </div>
-                    <div class="status-item">
-                        <strong>S3 Storage</strong>
-                        <span id="s3Status">✅ Available</span>
+                    <div class="status-footer">
+                        <small id="lastHealthCheck">Initializing status checks...</small>
+                        <button onclick="refreshSystemInfo()" class="refresh-btn">🔄 Refresh</button>
                     </div>
                 </div>
             </div>
@@ -323,42 +652,169 @@
             }
         }
         
+        // Overall health status check for System Information section
+        async function checkOverallHealth() {
+            try {
+                console.log('Checking overall health status...');
+                const response = await fetch('/api/status/infrastructure');
+                
+                if (response.ok) {
+                    const status = await response.json();
+                    console.log('Overall health check:', status.overall);
+                    
+                    const healthElement = document.getElementById('healthStatus');
+                    if (healthElement) {
+                        if (status.overall === 'healthy') {
+                            healthElement.innerHTML = '<span class="success">✅ Healthy</span>';
+                        } else if (status.overall === 'warning') {
+                            healthElement.innerHTML = '<span class="warning">⚠️ Warning</span>';
+                        } else {
+                            healthElement.innerHTML = '<span class="error">❌ Unhealthy</span>';
+                        }
+                    }
+                } else {
+                    console.error('Overall health check failed:', response.status);
+                    const healthElement = document.getElementById('healthStatus');
+                    if (healthElement) {
+                        healthElement.innerHTML = '<span class="error">⚠️ Check Failed</span>';
+                    }
+                }
+            } catch (error) {
+                console.error('Overall health check failed:', error);
+                const healthElement = document.getElementById('healthStatus');
+                if (healthElement) {
+                    healthElement.innerHTML = '<span class="error">❌ Error</span>';
+                }
+            }
+        }
+        
+        // API health check for system information section
+        async function checkApiHealth() {
+            try {
+                console.log('Checking API health for system info...');
+                const response = await fetch('/api/health');
+                
+                if (response.ok) {
+                    const healthData = await response.json();
+                    console.log('API health:', healthData);
+                    
+                    const apiElement = document.getElementById('apiStatus');
+                    if (apiElement) { // Only update if element exists (for system info section)
+                        if (healthData.status === 'healthy') {
+                            apiElement.innerHTML = '<span class="success">✅ API Running</span>';
+                        } else {
+                            apiElement.innerHTML = '<span class="warning">⚠️ API Issues</span>';
+                        }
+                    }
+                } else {
+                    const apiElement = document.getElementById('apiStatus');
+                    if (apiElement) {
+                        apiElement.innerHTML = '<span class="error">❌ API Down</span>';
+                    }
+                }
+            } catch (error) {
+                console.error('API health check failed:', error);
+                const apiElement = document.getElementById('apiStatus');
+                if (apiElement) {
+                    apiElement.innerHTML = '<span class="error">❌ API Error</span>';
+                }
+            }
+        }
+        
         function refreshSystemInfo() {
             console.log('Refreshing system info...');
             loadSystemInfo();
-            checkHealth();
-            checkApiHealth();
+            checkOverallHealth(); // Overall health for system info section
+            checkApiHealth(); // API health check for system info
+            checkHealth(); // Infrastructure status check
         }
         
-        // Health check
+        // Infrastructure status check (focused on AWS services only)
         async function checkHealth() {
             try {
-                const response = await fetch('/health');
+                console.log('Checking infrastructure status...');
+                const response = await fetch('/api/status/infrastructure');
                 
                 if (response.ok) {
-                    document.getElementById('healthStatus').innerHTML = '<span class="success">✅ Healthy</span>';
+                    const status = await response.json();
+                    console.log('Infrastructure status:', status);
+                    
+                    // Update only infrastructure component statuses
+                    if (status.components) {
+                        updateComponentStatus('s3Status', status.components.s3);
+                        updateComponentStatus('rekognitionStatus', status.components.rekognition);
+                        updateComponentStatus('systemStatus', status.components.system);
+                    }
+                    
+                    // Update last check time
+                    const lastCheck = new Date(status.timestamp).toLocaleTimeString();
+                    const lastCheckElement = document.getElementById('lastHealthCheck');
+                    if (lastCheckElement) {
+                        lastCheckElement.textContent = `Last check: ${lastCheck}`;
+                    }
+                    
                 } else {
-                    document.getElementById('healthStatus').innerHTML = '<span class="error">⚠️ Warning</span>';
+                    console.error('Infrastructure status check failed:', response.status, response.statusText);
+                    // Set infrastructure components to error state
+                    document.getElementById('s3Status').innerHTML = '<span class="error">❌ Check Failed</span>';
+                    document.getElementById('rekognitionStatus').innerHTML = '<span class="error">❌ Check Failed</span>';
+                    document.getElementById('systemStatus').innerHTML = '<span class="error">❌ Check Failed</span>';
                 }
             } catch (error) {
-                console.error('Health check failed:', error);
-                document.getElementById('healthStatus').innerHTML = '<span class="error">❌ Error</span>';
+                console.error('Infrastructure check failed:', error);
+                // Set infrastructure components to error state
+                document.getElementById('s3Status').innerHTML = '<span class="error">❌ Connection Error</span>';
+                document.getElementById('rekognitionStatus').innerHTML = '<span class="error">❌ Connection Error</span>';
+                document.getElementById('systemStatus').innerHTML = '<span class="error">❌ Connection Error</span>';
+            }
+        }
+        
+        // Helper function to update component status
+        function updateComponentStatus(elementId, componentStatus) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                console.warn(`Element ${elementId} not found`);
+                return;
+            }
+            
+            if (!componentStatus) {
+                element.innerHTML = '<span class="error">❌ No Data</span>';
+                return;
+            }
+            
+            if (componentStatus.status === 'healthy') {
+                element.innerHTML = `<span class="success">✅ ${componentStatus.message}</span>`;
+            } else if (componentStatus.status === 'warning') {
+                element.innerHTML = `<span class="warning">⚠️ ${componentStatus.message}</span>`;
+            } else if (componentStatus.status === 'unknown') {
+                element.innerHTML = `<span class="info">ℹ️ ${componentStatus.message}</span>`;
+            } else {
+                element.innerHTML = `<span class="error">❌ ${componentStatus.message}</span>`;
             }
         }
         
         // API health check
         async function checkApiHealth() {
             try {
-                const response = await fetch(`${API_BASE}/health`);
+                console.log('Checking API health...');
+                const response = await fetch('/api/health');
                 
                 if (response.ok) {
-                    document.getElementById('apiStatus').innerHTML = '<span class="success">✅ API Ready</span>';
+                    const healthData = await response.json();
+                    console.log('API health:', healthData);
+                    
+                    const apiElement = document.getElementById('apiStatus');
+                    if (healthData.status === 'healthy') {
+                        apiElement.innerHTML = '<span class="success">✅ API Running</span>';
+                    } else {
+                        apiElement.innerHTML = '<span class="warning">⚠️ API Issues</span>';
+                    }
                 } else {
-                    document.getElementById('apiStatus').innerHTML = '<span class="error">⚠️ API Warning</span>';
+                    document.getElementById('apiStatus').innerHTML = '<span class="error">❌ API Down</span>';
                 }
             } catch (error) {
                 console.error('API health check failed:', error);
-                document.getElementById('apiStatus').innerHTML = '<span class="error">❌ API Down</span>';
+                document.getElementById('apiStatus').innerHTML = '<span class="error">❌ API Error</span>';
             }
         }
         
@@ -413,7 +869,12 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    uploadedImages = [...uploadedImages, ...result.files];
+                    // Add timestamp to new images and put them at the beginning
+                    const newImages = result.files.map(file => ({
+                        ...file,
+                        uploadTime: new Date().toISOString()
+                    }));
+                    uploadedImages = [...newImages, ...uploadedImages];
                     displayUploadResults(result);
                     displayImageGallery();
                 } else {
@@ -438,11 +899,76 @@
         }
         
         async function displayImageGallery() {
-            imageGallery.innerHTML = '';
+            const imageGallery = document.getElementById('imageGallery');
             
-            for (const image of uploadedImages) {
-                if (image.status !== 'uploaded') continue;
-                
+            console.log('displayImageGallery called, uploadedImages length:', uploadedImages.length);
+            console.log('uploadedImages sample:', uploadedImages[0]);
+            
+            // Sort images by upload time (newest first)
+            // Filter for uploaded images OR images from S3 (which don't have status field)
+            const sortedImages = [...uploadedImages]
+                .filter(img => !img.status || img.status === 'uploaded') // Accept images without status (from S3) or with status 'uploaded'
+                .sort((a, b) => new Date(b.uploadTime || 0) - new Date(a.uploadTime || 0));
+            
+            console.log('Filtered sortedImages length:', sortedImages.length);
+            
+            if (sortedImages.length === 0) {
+                imageGallery.innerHTML = '<p style="text-align: center; color: #666;">No images uploaded yet</p>';
+                return;
+            }
+            
+            // Separate recent (last 5) and older images
+            const recentImages = sortedImages.slice(0, 5);
+            const olderImages = sortedImages.slice(5);
+            
+            let galleryHTML = '';
+            
+            // Recent uploads section (always expanded)
+            if (recentImages.length > 0) {
+                galleryHTML += `
+                    <div class="gallery-section">
+                        <div class="gallery-header" onclick="toggleGallerySection('recent')">
+                            <h4>📸 Recent Uploads (${recentImages.length})</h4>
+                            <span class="gallery-toggle expanded" id="recent-toggle">▼</span>
+                        </div>
+                        <div class="gallery-content expanded" id="recent-content">
+                            <div class="recent-uploads" id="recent-images"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Older uploads section (collapsed by default)
+            if (olderImages.length > 0) {
+                galleryHTML += `
+                    <div class="gallery-section">
+                        <div class="gallery-header" onclick="toggleGallerySection('older')">
+                            <h4>📁 Previous Uploads (${olderImages.length})</h4>
+                            <span class="gallery-toggle" id="older-toggle">▼</span>
+                        </div>
+                        <div class="gallery-content" id="older-content">
+                            <div class="older-uploads" id="older-images"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            imageGallery.innerHTML = galleryHTML;
+            
+            // Load recent images
+            await loadImagesIntoContainer(recentImages, 'recent-images');
+            
+            // Load older images only if section is expanded
+            if (olderImages.length > 0) {
+                await loadImagesIntoContainer(olderImages, 'older-images');
+            }
+        }
+        
+        async function loadImagesIntoContainer(images, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            for (const image of images) {
                 try {
                     // Get presigned URL for image
                     const urlResponse = await fetch(`${API_BASE}/image/${encodeURIComponent(image.s3Key)}`);
@@ -451,10 +977,23 @@
                     if (!urlData.success) continue;
                     
                     const imageElement = createImageElement(image, urlData.url);
-                    imageGallery.appendChild(imageElement);
+                    container.appendChild(imageElement);
                 } catch (error) {
                     console.error('Failed to load image:', error);
                 }
+            }
+        }
+        
+        function toggleGallerySection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const toggle = document.getElementById(`${sectionId}-toggle`);
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                toggle.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                toggle.classList.add('expanded');
             }
         }
         
@@ -464,17 +1003,23 @@
             div.onclick = () => showImageModal(imageData, imageUrl);
             
             const rekognition = imageData.rekognition || {};
-            const peopleCount = rekognition.peopleCount || 0;
             const boundingBoxes = rekognition.boundingBoxes || [];
+            const faceBoxes = rekognition.faceBoxes || [];
+            
+            // Count people based on actual person bounding boxes, not face count
+            const peopleCount = boundingBoxes.length;
+            const faceCount = faceBoxes.length;
             
             div.innerHTML = `
                 <div class="image-container">
-                    <img src="${imageUrl}" alt="${imageData.originalName}" onload="drawBoundingBoxes(this, ${JSON.stringify(boundingBoxes).replace(/"/g, '&quot;')})">
+                    <img src="${imageUrl}" alt="${imageData.originalName}" 
+                         onload="drawBoundingBoxes(this, ${JSON.stringify(boundingBoxes).replace(/"/g, '&quot;')}, ${JSON.stringify(faceBoxes).replace(/"/g, '&quot;')})">
                 </div>
                 <div class="image-info">
                     <strong>${imageData.originalName}</strong><br>
                     👥 People detected: ${peopleCount}<br>
-                    📦 Bounding boxes: ${boundingBoxes.length}
+                    😊 Faces detected: ${faceCount}<br>
+                    📦 Total boxes: ${boundingBoxes.length + faceBoxes.length}
                 </div>
                 <div class="labels">
                     ${(rekognition.labels || []).slice(0, 5).map(label => 
@@ -486,39 +1031,115 @@
             return div;
         }
         
-        function drawBoundingBoxes(img, boundingBoxes) {
+        function drawBoundingBoxes(img, boundingBoxes, faceBoxes = []) {
             const container = img.parentElement;
             
             // Remove existing bounding boxes
             container.querySelectorAll('.bounding-box').forEach(box => box.remove());
             
-            boundingBoxes.forEach(box => {
-                const bbox = box.boundingBox;
-                const boxElement = document.createElement('div');
-                boxElement.className = 'bounding-box';
-                
-                // Calculate position and size based on image dimensions
-                const imgRect = img.getBoundingClientRect();
-                const containerRect = container.getBoundingClientRect();
-                
-                const left = bbox.Left * img.offsetWidth;
-                const top = bbox.Top * img.offsetHeight;
-                const width = bbox.Width * img.offsetWidth;
-                const height = bbox.Height * img.offsetHeight;
-                
-                boxElement.style.left = left + 'px';
-                boxElement.style.top = top + 'px';
-                boxElement.style.width = width + 'px';
-                boxElement.style.height = height + 'px';
-                
-                // Add label
-                const label = document.createElement('div');
-                label.className = 'bounding-box-label';
-                label.textContent = `${box.label} (${Math.round(box.confidence)}%)`;
-                boxElement.appendChild(label);
-                
-                container.appendChild(boxElement);
+            // Wait for image to be fully loaded and get its actual displayed dimensions
+            if (!img.complete || img.naturalWidth === 0) {
+                img.onload = () => drawBoundingBoxes(img, boundingBoxes, faceBoxes);
+                return;
+            }
+            
+            // Calculate the actual displayed image size (accounting for object-fit: contain)
+            const imgAspectRatio = img.naturalWidth / img.naturalHeight;
+            const containerAspectRatio = img.offsetWidth / img.offsetHeight;
+            
+            let displayedWidth, displayedHeight, offsetX = 0, offsetY = 0;
+            
+            if (imgAspectRatio > containerAspectRatio) {
+                // Image is wider - fit to width
+                displayedWidth = img.offsetWidth;
+                displayedHeight = img.offsetWidth / imgAspectRatio;
+                offsetY = (img.offsetHeight - displayedHeight) / 2;
+            } else if (imgAspectRatio < containerAspectRatio) {
+                // Image is taller - fit to height
+                displayedHeight = img.offsetHeight;
+                displayedWidth = img.offsetHeight * imgAspectRatio;
+                offsetX = (img.offsetWidth - displayedWidth) / 2;
+            } else {
+                // Aspect ratios are equal - image fills container exactly
+                displayedWidth = img.offsetWidth;
+                displayedHeight = img.offsetHeight;
+                offsetX = 0;
+                offsetY = 0;
+            }
+            
+            // Draw person bounding boxes
+            boundingBoxes.forEach((box, index) => {
+                drawSingleBoundingBox(container, box, displayedWidth, displayedHeight, offsetX, offsetY, 'person');
             });
+            
+            // Draw face bounding boxes with hover functionality
+            faceBoxes.forEach((box, index) => {
+                const boxElement = drawSingleBoundingBox(container, box, displayedWidth, displayedHeight, offsetX, offsetY, 'face');
+                
+                // Add hover functionality for face zoom
+                boxElement.addEventListener('mouseenter', (e) => {
+                    console.log('Face hover started:', box);
+                    showFaceZoom(e, img, box, displayedWidth, displayedHeight, offsetX, offsetY);
+                });
+                
+                boxElement.addEventListener('mouseleave', (e) => {
+                    console.log('Face hover ended');
+                    hideFaceZoom();
+                });
+                
+                boxElement.addEventListener('mousemove', (e) => {
+                    updateFaceZoomPosition(e);
+                });
+                
+                // Make sure the box is interactive
+                boxElement.style.pointerEvents = 'auto';
+                boxElement.style.cursor = 'pointer';
+            });
+        }
+        
+        function drawSingleBoundingBox(container, box, displayedWidth, displayedHeight, offsetX, offsetY, type) {
+            const bbox = box.boundingBox;
+            const boxElement = document.createElement('div');
+            boxElement.className = `bounding-box ${type}`;
+            
+            // Calculate bounding box position and size
+            const left = offsetX + (bbox.Left * displayedWidth);
+            const top = offsetY + (bbox.Top * displayedHeight);
+            const width = bbox.Width * displayedWidth;
+            const height = bbox.Height * displayedHeight;
+            
+            boxElement.style.position = 'absolute';
+            boxElement.style.left = left + 'px';
+            boxElement.style.top = top + 'px';
+            boxElement.style.width = width + 'px';
+            boxElement.style.height = height + 'px';
+            
+            // Add label
+            const label = document.createElement('div');
+            label.className = 'bounding-box-label';
+            
+            if (type === 'face') {
+                const ageRange = box.ageRange || {};
+                const gender = box.gender || {};
+                const emotions = box.emotions || [];
+                
+                let labelText = `Face (${Math.round(box.confidence)}%)`;
+                if (ageRange.Low && ageRange.High) {
+                    labelText += ` • ${ageRange.Low}-${ageRange.High}y`;
+                }
+                if (gender.Value) {
+                    labelText += ` • ${gender.Value}`;
+                }
+                
+                label.textContent = labelText;
+            } else {
+                label.textContent = `${box.label} (${Math.round(box.confidence)}%)`;
+            }
+            
+            boxElement.appendChild(label);
+            container.appendChild(boxElement);
+            
+            return boxElement;
         }
         
         function showImageModal(imageData, imageUrl) {
@@ -526,32 +1147,226 @@
             const modalContent = document.getElementById('modalContent');
             
             const rekognition = imageData.rekognition || {};
+            const faceBoxes = rekognition.faceBoxes || [];
+            const boundingBoxes = rekognition.boundingBoxes || [];
+            
+            // Count people based on actual person bounding boxes
+            const peopleCount = boundingBoxes.length;
+            const faceCount = faceBoxes.length;
             
             modalContent.innerHTML = `
                 <h2>${imageData.originalName}</h2>
-                <div class="image-container" style="max-width: 100%; margin: 20px 0;">
-                    <img src="${imageUrl}" style="width: 100%; max-height: 400px; object-fit: contain;" 
-                         onload="drawBoundingBoxes(this, ${JSON.stringify(rekognition.boundingBoxes || []).replace(/"/g, '&quot;')})">
+                <div class="image-container" style="max-width: 100%; margin: 20px 0; position: relative;">
+                    <img src="${imageUrl}" style="width: 100%; height: auto; max-height: 70vh; object-fit: contain; display: block;" 
+                         onload="drawBoundingBoxes(this, ${JSON.stringify(boundingBoxes).replace(/"/g, '&quot;')}, ${JSON.stringify(faceBoxes).replace(/"/g, '&quot;')})">
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div>
-                        <h3>Detection Results</h3>
-                        <p><strong>People Count:</strong> ${rekognition.peopleCount || 0}</p>
-                        <p><strong>Bounding Boxes:</strong> ${(rekognition.boundingBoxes || []).length}</p>
-                        <p><strong>Processed:</strong> ${rekognition.processedAt ? new Date(rekognition.processedAt).toLocaleString() : 'N/A'}</p>
+                        <h3>🎯 Detection Results</h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                            <p><strong>👥 People Count:</strong> ${peopleCount}</p>
+                            <p><strong>😊 Face Count:</strong> ${faceCount}</p>
+                            <p><strong>📦 Person Boxes:</strong> ${boundingBoxes.length}</p>
+                            <p><strong>🟢 Face Boxes:</strong> ${faceBoxes.length} <small>(hover to zoom)</small></p>
+                            <p><strong>⏰ Processed:</strong> ${rekognition.processedAt ? new Date(rekognition.processedAt).toLocaleString() : 'N/A'}</p>
+                            <p><strong>📏 Original Size:</strong> <span id="imageDimensions">Loading...</span></p>
+                        </div>
                     </div>
                     <div>
-                        <h3>All Labels</h3>
-                        <div class="labels">
+                        <h3>🏷️ All Labels</h3>
+                        <div class="labels" style="max-height: 200px; overflow-y: auto;">
                             ${(rekognition.labels || []).map(label => 
                                 `<span class="label-tag">${label.Name} (${Math.round(label.Confidence)}%)</span>`
                             ).join('')}
                         </div>
                     </div>
                 </div>
+                <div style="margin-top: 20px; padding: 15px; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #44ff44;">
+                    <h4>💡 Detection Guide:</h4>
+                    <p><strong>Red boxes:</strong> Detected people/pedestrians</p>
+                    <p><strong>Green boxes:</strong> Detected faces (hover for detailed analysis with age, gender, emotion)</p>
+                    <p><strong>People vs Faces:</strong> People count shows full body detections, Face count shows facial detections</p>
+                </div>
             `;
             
+            // Add image dimension info when loaded
+            const img = modalContent.querySelector('img');
+            img.onload = function() {
+                const dimensionsSpan = document.getElementById('imageDimensions');
+                if (dimensionsSpan) {
+                    dimensionsSpan.textContent = `${this.naturalWidth} × ${this.naturalHeight}px`;
+                }
+                drawBoundingBoxes(this, boundingBoxes, faceBoxes);
+            };
+            
             modal.style.display = 'block';
+        }
+        
+        let faceZoomPreview = null;
+        
+        function showFaceZoom(event, img, faceBox, displayedWidth, displayedHeight, offsetX, offsetY) {
+            // Remove any existing preview
+            hideFaceZoom();
+            
+            console.log('=== Face Data Debug ===');
+            console.log('Complete face box data:', faceBox);
+            console.log('Age range:', faceBox.ageRange);
+            console.log('Gender:', faceBox.gender);
+            console.log('Emotions:', faceBox.emotions);
+            
+            // Create zoom preview element
+            faceZoomPreview = document.createElement('div');
+            faceZoomPreview.className = 'face-zoom-preview';
+            
+            // Create detailed face info content
+            const ageRange = faceBox.ageRange || {};
+            const gender = faceBox.gender || {};
+            const emotions = faceBox.emotions || [];
+            
+            console.log('Processed data:', { ageRange, gender, emotions });
+            
+            let infoHTML = `<div style="margin-bottom: 8px;"><strong>🎯 Face Analysis</strong></div>`;
+            
+            // Confidence
+            infoHTML += `<div style="margin: 3px 0;"><strong>Confidence:</strong> ${Math.round(faceBox.confidence)}%</div>`;
+            
+            // Age information
+            if (ageRange && ageRange.Low && ageRange.High) {
+                infoHTML += `<div style="margin: 3px 0;"><strong>👤 Age:</strong> ${ageRange.Low}-${ageRange.High} years</div>`;
+            } else {
+                infoHTML += `<div style="margin: 3px 0; color: #666;"><strong>👤 Age:</strong> Not detected</div>`;
+                console.log('Age not detected. Raw ageRange:', ageRange);
+            }
+            
+            // Gender information
+            if (gender && gender.Value) {
+                const genderIcon = gender.Value.toLowerCase() === 'male' ? '👨' : '👩';
+                infoHTML += `<div style="margin: 3px 0;"><strong>${genderIcon} Gender:</strong> ${gender.Value} (${Math.round(gender.Confidence)}%)</div>`;
+            } else {
+                infoHTML += `<div style="margin: 3px 0; color: #666;"><strong>⚧ Gender:</strong> Not detected</div>`;
+                console.log('Gender not detected. Raw gender:', gender);
+            }
+            
+            // Emotion information
+            if (emotions && emotions.length > 0) {
+                const topEmotion = emotions[0];
+                const emotionIcons = {
+                    'HAPPY': '😊', 'SAD': '😢', 'ANGRY': '😠', 'SURPRISED': '😲',
+                    'FEAR': '😨', 'DISGUSTED': '🤢', 'CALM': '😌', 'CONFUSED': '😕'
+                };
+                const emotionIcon = emotionIcons[topEmotion.Type] || '😐';
+                infoHTML += `<div style="margin: 3px 0;"><strong>${emotionIcon} Emotion:</strong> ${topEmotion.Type} (${Math.round(topEmotion.Confidence)}%)</div>`;
+                
+                // Show top 3 emotions if available
+                if (emotions.length > 1) {
+                    infoHTML += `<div style="margin: 3px 0; font-size: 10px; color: #666;">`;
+                    infoHTML += `<strong>Other emotions:</strong> `;
+                    const otherEmotions = emotions.slice(1, 3).map(e => 
+                        `${e.Type} (${Math.round(e.Confidence)}%)`
+                    ).join(', ');
+                    infoHTML += otherEmotions + `</div>`;
+                }
+            } else {
+                infoHTML += `<div style="margin: 3px 0; color: #666;"><strong>😐 Emotion:</strong> Not detected</div>`;
+                console.log('Emotions not detected. Raw emotions:', emotions);
+            }
+            
+            // Use normalized coordinates directly
+            const bbox = faceBox.boundingBox;
+            
+            // Calculate face center as percentage
+            const faceCenterX = (bbox.Left + bbox.Width / 2) * 100;
+            const faceCenterY = (bbox.Top + bbox.Height / 2) * 100;
+            
+            // Calculate face size in pixels for container sizing
+            const faceWidth = bbox.Width * displayedWidth;
+            const faceHeight = bbox.Height * displayedHeight;
+            const faceSize = Math.max(faceWidth, faceHeight);
+            
+            // Calculate background-size based on face size
+            let containerSize, backgroundSize;
+            
+            if (faceSize < 8) {
+                containerSize = 150;
+                backgroundSize = '3000%';
+            } else if (faceSize < 15) {
+                containerSize = 140;
+                backgroundSize = '2000%';
+            } else if (faceSize < 25) {
+                containerSize = 130;
+                backgroundSize = '1200%';
+            } else if (faceSize < 40) {
+                containerSize = 120;
+                backgroundSize = '800%';
+            } else {
+                containerSize = 110;
+                backgroundSize = '500%';
+            }
+            
+            const faceImageHTML = `
+                <div style="
+                    width: ${containerSize}px; 
+                    height: ${containerSize}px; 
+                    border-radius: 8px; 
+                    border: 2px solid #44ff44;
+                    background-image: url('${img.src}');
+                    background-position: ${faceCenterX}% ${faceCenterY}%;
+                    background-size: ${backgroundSize};
+                    background-repeat: no-repeat;
+                    background-color: white;
+                    margin: 0 auto;
+                ">
+                </div>
+            `;
+            
+            // Set up the enhanced preview content
+            faceZoomPreview.innerHTML = `
+                <div style="text-align: center; padding: 10px; background: #f0f8ff; border-radius: 5px; margin-bottom: 8px;">
+                    ${faceImageHTML}
+                </div>
+                <div class="face-zoom-info" style="max-width: 250px;">
+                    ${infoHTML}
+                </div>
+            `;
+            
+            document.body.appendChild(faceZoomPreview);
+            updateFaceZoomPosition(event);
+            
+            console.log('Enhanced face zoom widget with debugging created');
+        }
+        
+        function updateFaceZoomPosition(event) {
+            if (!faceZoomPreview) return;
+            
+            const mouseX = event.clientX;
+            const mouseY = event.clientY;
+            const previewWidth = faceZoomPreview.offsetWidth || 200;
+            const previewHeight = faceZoomPreview.offsetHeight || 200;
+            
+            // Position preview to the right and slightly above the cursor
+            let left = mouseX + 15;
+            let top = mouseY - previewHeight / 2;
+            
+            // Adjust if preview would go off screen
+            if (left + previewWidth > window.innerWidth - 10) {
+                left = mouseX - previewWidth - 15;
+            }
+            if (top < 10) {
+                top = 10;
+            }
+            if (top + previewHeight > window.innerHeight - 10) {
+                top = window.innerHeight - previewHeight - 10;
+            }
+            
+            faceZoomPreview.style.left = left + 'px';
+            faceZoomPreview.style.top = top + 'px';
+        }
+        
+        function hideFaceZoom() {
+            if (faceZoomPreview) {
+                faceZoomPreview.remove();
+                faceZoomPreview = null;
+            }
         }
         
         function closeModal() {
@@ -566,19 +1381,55 @@
             }
         }
         
+        // Load existing images from server
+        async function loadExistingImages() {
+            try {
+                console.log('Loading existing images from S3...');
+                const response = await fetch('/api/images');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Loaded images from S3:', data);
+                
+                uploadedImages = data.images || [];
+                displayImageGallery();
+                
+            } catch (error) {
+                console.error('Failed to load existing images:', error);
+                const imageGallery = document.getElementById('imageGallery');
+                imageGallery.innerHTML = `
+                    <div class="gallery-section">
+                        <div class="gallery-header">
+                            <h3>❌ Failed to Load Images</h3>
+                        </div>
+                        <div class="gallery-content">
+                            <p>Error: ${error.message}</p>
+                            <p>This might be normal if no images have been uploaded yet.</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             console.log('Page loaded, initializing...');
             loadSystemInfo();
-            checkHealth();
-            checkApiHealth();
+            checkOverallHealth(); // Overall health for system info section
+            checkApiHealth(); // API health check for system info
+            checkHealth(); // Infrastructure status check
+            loadExistingImages(); // Load existing images from S3
         });
         
-        // Auto-refresh every 30 seconds
+        // Auto-refresh every 3000 seconds
         setInterval(() => {
-            checkHealth();
-            checkApiHealth();
-        }, 30000);
+            checkOverallHealth(); // Overall health for system info section
+            checkApiHealth(); // API health check for system info
+            checkHealth(); // Infrastructure status check
+        }, 3000000);
     </script>
 </body>
 </html>

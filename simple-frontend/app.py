@@ -38,10 +38,16 @@ S3_BUCKET = config.get('s3Bucket', 'my-app-image-bucket-20256200')
 @app.route('/api/upload', methods=['POST'])
 def upload_images():
     try:
-        if 'files' not in request.files:
+        # Check for both 'files' (multiple) and 'file' (single) form fields
+        files = []
+        if 'files' in request.files:
+            files = request.files.getlist('files')
+        elif 'file' in request.files:
+            files = request.files.getlist('file')
+        else:
             return jsonify({'error': 'No files provided'}), 400
         
-        files = request.files.getlist('files')
+        logger.info(f"Received {len(files)} files for upload")
         uploaded_files = []
         
         for file in files:
@@ -116,14 +122,15 @@ def process_with_rekognition(s3_key):
             MinConfidence=70
         )
         
-        # Detect people/pedestrians specifically
+        # Detect people/pedestrians specifically with detailed face attributes
         people_response = rekognition_client.detect_faces(
             Image={
                 'S3Object': {
                     'Bucket': S3_BUCKET,
                     'Name': s3_key
                 }
-            }
+            },
+            Attributes=['ALL']  # Request all face attributes including age, gender, emotions
         )
         
         # Extract pedestrian-related information
@@ -148,14 +155,32 @@ def process_with_rekognition(s3_key):
                     bounding_boxes.append({
                         'label': label['name'],
                         'confidence': instance.get('Confidence', label['confidence']),
-                        'boundingBox': instance['BoundingBox']
+                        'boundingBox': instance['BoundingBox'],
+                        'type': 'person'
                     })
+        
+        # Extract face bounding boxes
+        face_boxes = []
+        for face in people_response.get('FaceDetails', []):
+            if 'BoundingBox' in face:
+                face_boxes.append({
+                    'label': 'Face',
+                    'confidence': face.get('Confidence', 95),
+                    'boundingBox': face['BoundingBox'],
+                    'type': 'face',
+                    'ageRange': face.get('AgeRange', {}),
+                    'gender': face.get('Gender', {}),
+                    'emotions': face.get('Emotions', [])[:3],  # Top 3 emotions
+                    'landmarks': face.get('Landmarks', [])
+                })
         
         return {
             'labels': labels_response.get('Labels', [])[:10],  # Top 10 labels
             'peopleCount': people_count,
+            'faceCount': len(face_boxes),
             'personLabels': person_labels,
             'boundingBoxes': bounding_boxes,
+            'faceBoxes': face_boxes,
             'processedAt': datetime.utcnow().isoformat()
         }
         
@@ -179,6 +204,88 @@ def get_image_url(s3_key):
     except ClientError as e:
         return jsonify({'error': str(e), 'success': False}), 500
 
+@app.route('/api/images', methods=['GET'])
+def get_images():
+    """Get list of uploaded images from S3"""
+    try:
+        logger.info("Fetching images from S3")
+        
+        # List objects in S3 bucket
+        response = s3_client.list_objects_v2(
+            Bucket=S3_BUCKET,
+            Prefix='uploads/'
+        )
+        
+        images = []
+        
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                s3_key = obj['Key']
+                
+                # Skip directories
+                if s3_key.endswith('/'):
+                    continue
+                
+                # Get object metadata
+                try:
+                    metadata_response = s3_client.head_object(Bucket=S3_BUCKET, Key=s3_key)
+                    metadata = metadata_response.get('Metadata', {})
+                    
+                    # Generate presigned URL for the image
+                    image_url = s3_client.generate_presigned_url(
+                        'get_object',
+                        Params={'Bucket': S3_BUCKET, 'Key': s3_key},
+                        ExpiresIn=3600  # 1 hour
+                    )
+                    
+                    # Try to get Rekognition results
+                    rekognition_data = None
+                    try:
+                        rekognition_data = get_rekognition_results(s3_key)
+                    except Exception as e:
+                        logger.warning(f"Could not get Rekognition results for {s3_key}: {e}")
+                    
+                    image_info = {
+                        's3Key': s3_key,
+                        'fileName': s3_key.split('/')[-1],
+                        'originalName': metadata.get('original-name', s3_key.split('/')[-1]),
+                        'uploadTime': metadata.get('upload-time', obj['LastModified'].isoformat()),
+                        'size': obj['Size'],
+                        'url': image_url,
+                        'rekognition': rekognition_data
+                    }
+                    
+                    images.append(image_info)
+                    
+                except ClientError as e:
+                    logger.error(f"Error getting metadata for {s3_key}: {e}")
+                    continue
+        
+        logger.info(f"Found {len(images)} images")
+        
+        return jsonify({
+            'success': True,
+            'images': images,
+            'count': len(images),
+            'bucket': S3_BUCKET
+        })
+        
+    except ClientError as e:
+        logger.error(f"S3 error in get_images: {e}")
+        return jsonify({'error': f'S3 error: {str(e)}', 'success': False}), 500
+    except Exception as e:
+        logger.error(f"Error in get_images: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+def get_rekognition_results(s3_key):
+    """Get Rekognition results for an image"""
+    try:
+        # Re-process with Rekognition to get current results
+        return process_with_rekognition(s3_key)
+    except Exception as e:
+        logger.warning(f"Could not get Rekognition results for {s3_key}: {e}")
+        return None
+
 @app.route('/api/health')
 def health_check():
     return jsonify({
@@ -186,6 +293,118 @@ def health_check():
         'timestamp': datetime.utcnow().isoformat(),
         'bucket': S3_BUCKET
     })
+
+@app.route('/api/status/infrastructure')
+def infrastructure_status():
+    """Comprehensive infrastructure status check"""
+    logger.info("Infrastructure status check requested")
+    
+    status = {
+        'timestamp': datetime.utcnow().isoformat(),
+        'components': {}
+    }
+    
+    # Check S3 Bucket
+    try:
+        logger.info(f"Checking S3 bucket: {S3_BUCKET}")
+        s3_client.head_bucket(Bucket=S3_BUCKET)
+        # Try to list a few objects to verify access
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET, MaxKeys=1)
+        status['components']['s3'] = {
+            'status': 'healthy',
+            'message': f'Bucket {S3_BUCKET} accessible',
+            'objects_count': response.get('KeyCount', 0)
+        }
+        logger.info("S3 check: healthy")
+    except ClientError as e:
+        logger.error(f"S3 check failed: {e}")
+        status['components']['s3'] = {
+            'status': 'unhealthy',
+            'message': f'S3 Error: {str(e)}',
+            'error_code': e.response['Error']['Code']
+        }
+    except Exception as e:
+        logger.error(f"S3 connection error: {e}")
+        status['components']['s3'] = {
+            'status': 'unhealthy',
+            'message': f'S3 Connection Error: {str(e)}'
+        }
+    
+    # Check AWS Rekognition
+    try:
+        logger.info("Checking Rekognition service")
+        # Test Rekognition by calling list_collections (lightweight operation)
+        rekognition_client.list_collections(MaxResults=1)
+        status['components']['rekognition'] = {
+            'status': 'healthy',
+            'message': 'Rekognition service accessible'
+        }
+        logger.info("Rekognition check: healthy")
+    except ClientError as e:
+        logger.error(f"Rekognition check failed: {e}")
+        status['components']['rekognition'] = {
+            'status': 'unhealthy',
+            'message': f'Rekognition Error: {str(e)}',
+            'error_code': e.response['Error']['Code']
+        }
+    except Exception as e:
+        logger.error(f"Rekognition connection error: {e}")
+        status['components']['rekognition'] = {
+            'status': 'unhealthy',
+            'message': f'Rekognition Connection Error: {str(e)}'
+        }
+    
+    # Check Flask API (self)
+    status['components']['api'] = {
+        'status': 'healthy',
+        'message': 'Flask API running',
+        'config_loaded': bool(config),
+        'bucket_configured': bool(S3_BUCKET)
+    }
+    logger.info("API check: healthy")
+    
+    # Check system resources
+    try:
+        import psutil
+        logger.info("Checking system resources with psutil")
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        status['components']['system'] = {
+            'status': 'healthy' if cpu_percent < 80 and memory.percent < 80 else 'warning',
+            'cpu_percent': round(cpu_percent, 1),
+            'memory_percent': round(memory.percent, 1),
+            'disk_percent': round(disk.percent, 1),
+            'message': f'CPU: {cpu_percent:.1f}%, Memory: {memory.percent:.1f}%, Disk: {disk.percent:.1f}%'
+        }
+        logger.info(f"System check: {status['components']['system']['status']}")
+    except ImportError:
+        logger.warning("psutil not available")
+        status['components']['system'] = {
+            'status': 'unknown',
+            'message': 'System monitoring not available'
+        }
+    except Exception as e:
+        logger.error(f"System check error: {e}")
+        status['components']['system'] = {
+            'status': 'error',
+            'message': f'System check error: {str(e)}'
+        }
+    
+    # Overall health status
+    component_statuses = [comp['status'] for comp in status['components'].values()]
+    if 'unhealthy' in component_statuses or 'error' in component_statuses:
+        status['overall'] = 'unhealthy'
+    elif 'warning' in component_statuses:
+        status['overall'] = 'warning'
+    else:
+        status['overall'] = 'healthy'
+    
+    logger.info(f"Overall status: {status['overall']}")
+    logger.info(f"Returning status: {status}")
+    
+    return jsonify(status)
 
 @app.route('/api/config')
 def get_config():

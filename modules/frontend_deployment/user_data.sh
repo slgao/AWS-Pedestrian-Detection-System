@@ -8,7 +8,7 @@ LOG="/tmp/deploy.log"
 # Install packages
 sudo dnf update -y
 sudo dnf install -y nginx git python3 python3-pip
-sudo pip3 install flask flask-cors boto3
+sudo pip3 install flask flask-cors boto3 psutil
 
 # Setup web directory
 sudo mkdir -p /var/www/html
