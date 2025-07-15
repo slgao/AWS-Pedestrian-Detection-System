@@ -994,6 +994,21 @@
             } else {
                 content.classList.add('expanded');
                 toggle.classList.add('expanded');
+                
+                // Redraw bounding boxes for images in the newly expanded section
+                setTimeout(() => {
+                    const images = content.querySelectorAll('img[data-bounding-boxes]');
+                    images.forEach(img => {
+                        const boundingBoxes = JSON.parse(img.getAttribute('data-bounding-boxes') || '[]');
+                        const faceBoxes = JSON.parse(img.getAttribute('data-face-boxes') || '[]');
+                        
+                        // Don't remove the data attributes - keep them for future use
+                        console.log('Toggle: Redrawing for expanded section', { boundingBoxes: boundingBoxes.length, faceBoxes: faceBoxes.length });
+                        
+                        // Redraw the bounding boxes now that the section is visible
+                        drawBoundingBoxes(img, boundingBoxes, faceBoxes);
+                    });
+                }, 100); // Small delay to ensure CSS transition is complete
             }
         }
         
@@ -1034,6 +1049,12 @@
         function drawBoundingBoxes(img, boundingBoxes, faceBoxes = []) {
             const container = img.parentElement;
             
+            // Always store the bounding box data for future use (resize, expand/collapse)
+            if (boundingBoxes.length > 0 || faceBoxes.length > 0) {
+                img.setAttribute('data-bounding-boxes', JSON.stringify(boundingBoxes));
+                img.setAttribute('data-face-boxes', JSON.stringify(faceBoxes));
+            }
+            
             // Remove existing bounding boxes
             container.querySelectorAll('.bounding-box').forEach(box => box.remove());
             
@@ -1042,6 +1063,35 @@
                 img.onload = () => drawBoundingBoxes(img, boundingBoxes, faceBoxes);
                 return;
             }
+            
+            // Check if the image is in a collapsed section
+            const gallerySection = container.closest('.gallery-section');
+            const galleryContent = gallerySection ? gallerySection.querySelector('.gallery-content') : null;
+            
+            // Debug logging
+            console.log('Drawing bounding boxes for image:', {
+                hasGallerySection: !!gallerySection,
+                hasGalleryContent: !!galleryContent,
+                isExpanded: galleryContent ? galleryContent.classList.contains('expanded') : 'N/A',
+                imageVisible: img.offsetWidth > 0 && img.offsetHeight > 0,
+                boundingBoxCount: boundingBoxes.length,
+                faceBoxCount: faceBoxes.length
+            });
+            
+            if (galleryContent && !galleryContent.classList.contains('expanded')) {
+                // Section is collapsed - data already stored above, just return
+                console.log('Section is collapsed, deferring bounding box drawing');
+                return;
+            }
+            
+            // Check if image dimensions are available (not hidden)
+            if (img.offsetWidth === 0 || img.offsetHeight === 0) {
+                // Image is hidden - data already stored above, just return
+                console.log('Image dimensions not available, deferring bounding box drawing');
+                return;
+            }
+            
+            console.log('Proceeding with bounding box drawing');
             
             // Calculate the actual displayed image size (accounting for object-fit: contain)
             const imgAspectRatio = img.naturalWidth / img.naturalHeight;
@@ -1066,6 +1116,12 @@
                 offsetX = 0;
                 offsetY = 0;
             }
+            
+            console.log('Bounding box dimensions:', {
+                container: { width: img.offsetWidth, height: img.offsetHeight },
+                displayed: { width: displayedWidth, height: displayedHeight },
+                offset: { x: offsetX, y: offsetY }
+            });
             
             // Draw person bounding boxes
             boundingBoxes.forEach((box, index) => {
@@ -1168,7 +1224,11 @@
                             <p><strong>😊 Face Count:</strong> ${faceCount}</p>
                             <p><strong>📦 Person Boxes:</strong> ${boundingBoxes.length}</p>
                             <p><strong>🟢 Face Boxes:</strong> ${faceBoxes.length} <small>(hover to zoom)</small></p>
-                            <p><strong>⏰ Processed:</strong> ${rekognition.processedAt ? new Date(rekognition.processedAt).toLocaleString() : 'N/A'}</p>
+                            <p><strong>⏰ Processed:</strong> ${
+                                imageData.processed_at ? new Date(imageData.processed_at).toLocaleString() : 
+                                imageData.uploadTime ? new Date(imageData.uploadTime).toLocaleString() + ' (estimated)' : 
+                                'N/A'
+                            }</p>
                             <p><strong>📏 Original Size:</strong> <span id="imageDimensions">Loading...</span></p>
                         </div>
                     </div>
@@ -1413,6 +1473,81 @@
                 `;
             }
         }
+        
+        // Debounce function to limit resize event frequency
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Handle window resize to redraw bounding boxes
+        window.addEventListener('resize', debounce(() => {
+            const visibleImages = document.querySelectorAll('.gallery-content.expanded img');
+            visibleImages.forEach(img => {
+                const container = img.parentElement;
+                const existingBoxes = container.querySelectorAll('.bounding-box');
+                
+                if (existingBoxes.length > 0 || img.hasAttribute('data-bounding-boxes')) {
+                    // Get stored bounding box data
+                    let boundingBoxes = [];
+                    let faceBoxes = [];
+                    
+                    // First try to get from data attributes (most reliable)
+                    if (img.hasAttribute('data-bounding-boxes')) {
+                        try {
+                            boundingBoxes = JSON.parse(img.getAttribute('data-bounding-boxes') || '[]');
+                            faceBoxes = JSON.parse(img.getAttribute('data-face-boxes') || '[]');
+                            console.log('Resize: Using data attributes', { boundingBoxes: boundingBoxes.length, faceBoxes: faceBoxes.length });
+                        } catch (e) {
+                            console.warn('Failed to parse data attributes:', e);
+                        }
+                    }
+                    
+                    // If no data attributes, try to extract from onload attribute
+                    if (boundingBoxes.length === 0 && faceBoxes.length === 0) {
+                        const onloadAttr = img.getAttribute('onload');
+                        if (onloadAttr) {
+                            // Improved regex to handle the HTML-encoded quotes
+                            const match = onloadAttr.match(/drawBoundingBoxes\(this,\s*([^,]+),\s*([^)]+)\)/);
+                            if (match) {
+                                try {
+                                    // Decode HTML entities and parse JSON
+                                    const boundingBoxStr = match[1].replace(/&quot;/g, '"');
+                                    const faceBoxStr = match[2].replace(/&quot;/g, '"');
+                                    
+                                    boundingBoxes = JSON.parse(boundingBoxStr);
+                                    faceBoxes = JSON.parse(faceBoxStr);
+                                    
+                                    console.log('Resize: Parsed from onload', { boundingBoxes: boundingBoxes.length, faceBoxes: faceBoxes.length });
+                                    
+                                    // Store in data attributes for future use
+                                    img.setAttribute('data-bounding-boxes', JSON.stringify(boundingBoxes));
+                                    img.setAttribute('data-face-boxes', JSON.stringify(faceBoxes));
+                                } catch (e) {
+                                    console.warn('Could not parse bounding boxes from onload attribute:', e);
+                                    console.log('Onload content:', match[1], match[2]);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Only redraw if we have valid data
+                    if (boundingBoxes.length > 0 || faceBoxes.length > 0) {
+                        console.log('Resize: Redrawing with data', { boundingBoxes: boundingBoxes.length, faceBoxes: faceBoxes.length });
+                        drawBoundingBoxes(img, boundingBoxes, faceBoxes);
+                    } else {
+                        console.warn('Resize: No bounding box data available for redraw');
+                    }
+                }
+            });
+        }, 250));
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {

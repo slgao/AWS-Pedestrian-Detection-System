@@ -9,6 +9,14 @@ import boto3
 from botocore.exceptions import ClientError
 import logging
 
+# Import database manager
+try:
+    from database import db_manager
+    DATABASE_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Database module not available: {e}")
+    DATABASE_AVAILABLE = False
+
 app = Flask(__name__)
 CORS(app)
 
@@ -59,23 +67,63 @@ def upload_images():
             unique_filename = f"uploads/{uuid.uuid4()}{file_extension}"
             
             try:
+                # Get file size
+                file.seek(0, os.SEEK_END)
+                file_size = file.tell()
+                file.seek(0)
+                
                 # Upload to S3
                 s3_client.upload_fileobj(
                     file,
                     S3_BUCKET,
                     unique_filename,
                     ExtraArgs={
-                        'ContentType': file.content_type,
+                        'ContentType': file.content_type or 'application/octet-stream',
                         'Metadata': {
                             'original-name': file.filename,
                             'upload-time': datetime.utcnow().isoformat(),
-                            'uploaded-by': 'pedestrian-detection-system'
+                            'uploaded-by': 'image-recognition-system'
                         }
                     }
                 )
                 
-                # Process with Rekognition
+                logger.info(f"Successfully uploaded to S3: {unique_filename}")
+                
+                # Store in database if available
+                image_id = None
+                if DATABASE_AVAILABLE:
+                    try:
+                        image_id = db_manager.create_image_record(
+                            s3_key=unique_filename,
+                            original_name=file.filename,
+                            file_size=file_size
+                        )
+                        db_manager.log_processing_event(
+                            image_id=image_id,
+                            process_type='upload',
+                            status='completed',
+                            message=f'Uploaded to S3: {unique_filename}'
+                        )
+                        logger.info(f"Created database record with ID: {image_id}")
+                    except Exception as db_error:
+                        logger.error(f"Database error: {db_error}")
+                        # Continue without database - don't fail the upload
+                
+                # Process with Rekognition (still synchronous for now)
                 rekognition_result = process_with_rekognition(unique_filename)
+                
+                # Save Rekognition results to database if available
+                if DATABASE_AVAILABLE and image_id:
+                    try:
+                        db_manager.save_detection_results(image_id, rekognition_result)
+                        db_manager.update_processing_status(
+                            image_id=image_id,
+                            status='completed',
+                            processed_at=datetime.utcnow()
+                        )
+                        logger.info(f"Saved detection results for image ID: {image_id}")
+                    except Exception as db_error:
+                        logger.error(f"Failed to save detection results: {db_error}")
                 
                 uploaded_files.append({
                     'fileName': unique_filename,
@@ -84,7 +132,10 @@ def upload_images():
                     'bucket': S3_BUCKET,
                     'status': 'uploaded',
                     'rekognition': rekognition_result,
-                    'uploadTime': datetime.utcnow().isoformat()
+                    'uploadTime': datetime.utcnow().isoformat(),
+                    'processed_at': datetime.utcnow().isoformat(),
+                    'imageId': image_id,
+                    'fileSize': file_size
                 })
                 
                 logger.info(f"Successfully uploaded and processed: {file.filename}")
@@ -96,11 +147,19 @@ def upload_images():
                     'status': 'failed',
                     'error': str(e)
                 })
+            except Exception as e:
+                logger.error(f"Processing failed for {file.filename}: {e}")
+                uploaded_files.append({
+                    'fileName': file.filename,
+                    'status': 'failed',
+                    'error': str(e)
+                })
         
         return jsonify({
             'success': True,
             'files': uploaded_files,
-            'bucket': S3_BUCKET
+            'bucket': S3_BUCKET,
+            'database_enabled': DATABASE_AVAILABLE
         })
         
     except Exception as e:
@@ -206,9 +265,132 @@ def get_image_url(s3_key):
 
 @app.route('/api/images', methods=['GET'])
 def get_images():
-    """Get list of uploaded images from S3"""
+    """Get list of uploaded images from database or S3 fallback"""
     try:
-        logger.info("Fetching images from S3")
+        logger.info("Fetching images...")
+        
+        # Try database first if available
+        if DATABASE_AVAILABLE:
+            try:
+                logger.info("Fetching images from database")
+                db_images = db_manager.get_all_images_with_detections()
+                
+                images = []
+                for db_image in db_images:
+                    # Generate presigned URL for the image
+                    try:
+                        image_url = s3_client.generate_presigned_url(
+                            'get_object',
+                            Params={'Bucket': S3_BUCKET, 'Key': db_image['s3_key']},
+                            ExpiresIn=3600  # 1 hour
+                        )
+                    except Exception as url_error:
+                        logger.warning(f"Could not generate URL for {db_image['s3_key']}: {url_error}")
+                        continue
+                    
+                    # Convert database format to API format
+                    rekognition_data = {
+                        'labels': [
+                            {'Name': label['label_name'], 'Confidence': float(label['confidence'])}
+                            for label in db_image.get('labels', [])
+                        ],
+                        'boundingBoxes': [
+                            {
+                                'label': 'Person',
+                                'confidence': float(person['confidence']),
+                                'boundingBox': {
+                                    'Left': float(person['bbox_left']),
+                                    'Top': float(person['bbox_top']),
+                                    'Width': float(person['bbox_width']),
+                                    'Height': float(person['bbox_height'])
+                                }
+                            }
+                            for person in db_image.get('person_detections', [])
+                        ],
+                        'faceBoxes': []
+                    }
+                    
+                    # Process face detections
+                    for face in db_image.get('face_detections', []):
+                        face_data = {
+                            'label': 'Face',
+                            'confidence': float(face['confidence']),
+                            'boundingBox': {
+                                'Left': float(face['bbox_left']),
+                                'Top': float(face['bbox_top']),
+                                'Width': float(face['bbox_width']),
+                                'Height': float(face['bbox_height'])
+                            }
+                        }
+                        
+                        # Add age range if available
+                        if face.get('age_low') and face.get('age_high'):
+                            face_data['ageRange'] = {
+                                'Low': face['age_low'],
+                                'High': face['age_high']
+                            }
+                        
+                        # Add gender if available
+                        if face.get('gender'):
+                            face_data['gender'] = {
+                                'Value': face['gender'],
+                                'Confidence': float(face.get('gender_confidence', 0))
+                            }
+                        
+                        # Add primary emotion if available
+                        if face.get('primary_emotion'):
+                            face_data['emotions'] = [{
+                                'Type': face['primary_emotion'],
+                                'Confidence': float(face.get('emotion_confidence', 0))
+                            }]
+                        
+                        # Parse additional emotions if available
+                        if face.get('emotions'):
+                            emotions_str = face['emotions']
+                            additional_emotions = []
+                            for emotion_pair in emotions_str.split(','):
+                                if ':' in emotion_pair:
+                                    emotion_type, confidence = emotion_pair.split(':')
+                                    additional_emotions.append({
+                                        'Type': emotion_type,
+                                        'Confidence': float(confidence)
+                                    })
+                            if additional_emotions:
+                                face_data['emotions'] = additional_emotions
+                        
+                        rekognition_data['faceBoxes'].append(face_data)
+                    
+                    image_info = {
+                        's3Key': db_image['s3_key'],
+                        'fileName': db_image['s3_key'].split('/')[-1],
+                        'originalName': db_image['original_name'],
+                        'uploadTime': db_image['upload_time'].isoformat() if db_image['upload_time'] else None,
+                        'size': db_image.get('file_size'),
+                        'url': image_url,
+                        'rekognition': rekognition_data,
+                        'processing_status': db_image.get('processing_status'),
+                        'processed_at': db_image['processed_at'].isoformat() if db_image.get('processed_at') else None,
+                        'imageId': db_image['id']
+                    }
+                    
+                    images.append(image_info)
+                
+                logger.info(f"Found {len(images)} images from database")
+                
+                return jsonify({
+                    'success': True,
+                    'images': images,
+                    'count': len(images),
+                    'bucket': S3_BUCKET,
+                    'source': 'database'
+                })
+                
+            except Exception as db_error:
+                logger.error(f"Database error, falling back to S3: {db_error}")
+                # Fall through to S3 fallback
+        
+        # Fallback to S3 scanning (original method)
+        logger.info("Fetching images from S3 (fallback)")
         
         # List objects in S3 bucket
         response = s3_client.list_objects_v2(
@@ -261,13 +443,14 @@ def get_images():
                     logger.error(f"Error getting metadata for {s3_key}: {e}")
                     continue
         
-        logger.info(f"Found {len(images)} images")
+        logger.info(f"Found {len(images)} images from S3")
         
         return jsonify({
             'success': True,
             'images': images,
             'count': len(images),
-            'bucket': S3_BUCKET
+            'bucket': S3_BUCKET,
+            'source': 'S3'
         })
         
     except ClientError as e:

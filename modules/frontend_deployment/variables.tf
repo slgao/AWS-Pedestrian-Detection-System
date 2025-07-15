@@ -50,6 +50,30 @@ variable "security_group_ids" {
   type        = list(string)
 }
 
+# RDS Database Variables
+variable "rds_endpoint" {
+  description = "RDS database endpoint"
+  type        = string
+}
+
+variable "db_name" {
+  description = "Database name"
+  type        = string
+  default     = "image_recognition"
+}
+
+variable "db_username" {
+  description = "Database username"
+  type        = string
+  default     = "admin"
+}
+
+variable "db_password" {
+  description = "Database password"
+  type        = string
+  sensitive   = true
+}
+
 variable "instance_name" {
   description = "Name of the EC2 instance"
   type        = string

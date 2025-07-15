@@ -14,6 +14,10 @@ locals {
     s3_bucket_name  = var.s3_bucket_name
     api_endpoint    = var.api_endpoint
     environment     = var.environment
+    rds_endpoint    = var.rds_endpoint
+    db_name         = var.db_name
+    db_username     = var.db_username
+    db_password     = var.db_password
   }))
 }
 
