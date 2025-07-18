@@ -378,6 +378,41 @@
             position: relative;
             width: 100%;
             margin-bottom: 10px;
+            overflow: hidden;
+        }
+        
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .status-badge.processing {
+            background: rgba(255, 193, 7, 0.8);
+            color: #000;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-badge.completed {
+            background: rgba(40, 167, 69, 0.8);
+            color: #fff;
+        }
+        
+        .status-badge.failed {
+            background: rgba(220, 53, 69, 0.8);
+            color: #fff;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
         
         .image-container img {
@@ -410,12 +445,45 @@
             z-index: 15;
         }
         
+        /* Special style for faces that are counted as separate people */
+        .bounding-box.face-person {
+            border: 2px solid #ff9900;
+            background: rgba(255, 153, 0, 0.1);
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease;
+            z-index: 16;
+            box-shadow: 0 0 5px rgba(255, 153, 0, 0.5);
+        }
+        
+        .bounding-box.face-person::before {
+            content: "";
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            background: rgba(255, 153, 0, 0.8);
+            padding: 2px 5px;
+            border-radius: 4px;
+            color: white;
+        }
+        }
+        
         .bounding-box.face:hover {
             border-color: #00ff00;
             border-width: 2px;
             background: rgba(68, 255, 68, 0.15);
             transform: scale(1.02);
             box-shadow: 0 0 10px rgba(68, 255, 68, 0.3);
+        }
+        
+        .bounding-box.face-person:hover {
+            border-color: #ff6600;
+            border-width: 3px;
+            background: rgba(255, 153, 0, 0.2);
+            transform: scale(1.05);
+            box-shadow: 0 0 12px rgba(255, 153, 0, 0.5);
         }
         
         .bounding-box-label {
@@ -439,6 +507,12 @@
         .bounding-box.face .bounding-box-label {
             background: rgba(68, 255, 68, 0.8);
             color: #000;
+        }
+        
+        .bounding-box.face-person .bounding-box-label {
+            background: rgba(255, 153, 0, 0.8);
+            color: #000;
+            font-weight: bold;
         }
         
         .face-zoom-preview {
@@ -544,8 +618,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚶‍♂️ Pedestrian Detection System</h1>
-            <p>AWS 3-Tier Architecture with AI-Powered Image Recognition</p>
+            <h1>🚶‍♂️ Pedestrian/Person Detection System</h1>
+            <p>AWS N-Tier Architecture with AI-Powered Image Recognition</p>
         </div>
         
         <div class="main-layout">
@@ -740,10 +814,10 @@
                     console.log('Infrastructure status:', status);
                     
                     // Update only infrastructure component statuses
-                    if (status.components) {
-                        updateComponentStatus('s3Status', status.components.s3);
-                        updateComponentStatus('rekognitionStatus', status.components.rekognition);
-                        updateComponentStatus('systemStatus', status.components.system);
+                    if (status.services) {
+                        updateComponentStatus('s3Status', status.services.s3);
+                        updateComponentStatus('rekognitionStatus', status.services.lambda);
+                        updateComponentStatus('systemStatus', status.services.database);
                     }
                     
                     // Update last check time
@@ -784,6 +858,8 @@
             
             if (componentStatus.status === 'healthy') {
                 element.innerHTML = `<span class="success">✅ ${componentStatus.message}</span>`;
+            } else if (componentStatus.status === 'lambda_managed') {
+                element.innerHTML = `<span class="success">🚀 ${componentStatus.message}</span>`;
             } else if (componentStatus.status === 'warning') {
                 element.innerHTML = `<span class="warning">⚠️ ${componentStatus.message}</span>`;
             } else if (componentStatus.status === 'unknown') {
@@ -869,14 +945,29 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Add timestamp to new images and put them at the beginning
-                    const newImages = result.files.map(file => ({
-                        ...file,
-                        uploadTime: new Date().toISOString()
-                    }));
-                    uploadedImages = [...newImages, ...uploadedImages];
                     displayUploadResults(result);
-                    displayImageGallery();
+                    
+                    // Load all images from server (including newly uploaded ones)
+                    // Small delay to ensure server has the images ready
+                    setTimeout(() => {
+                        console.log('Loading images after upload...');
+                        loadExistingImages().then(() => {
+                            // Find newly uploaded images that need processing
+                            const newImageIds = result.files
+                                .filter(file => file.imageId)
+                                .map(file => file.imageId);
+                                
+                            // Add to unprocessed set
+                            newImageIds.forEach(id => {
+                                if (id) unprocessedImages.add(id);
+                            });
+                            
+                            // Start smart refresh if not already running
+                            if (unprocessedImages.size > 0 && !smartRefreshInterval) {
+                                startSmartRefresh();
+                            }
+                        });
+                    }, 2000); // 2 second delay
                 } else {
                     throw new Error(result.error || 'Upload failed');
                 }
@@ -892,7 +983,7 @@
             const failCount = result.files.filter(f => f.status === 'failed').length;
             
             uploadResults.innerHTML = `
-                <div class="success">✅ ${successCount} images uploaded and processed successfully!</div>
+                <div class="success">✅ ${successCount} images uploaded successfully!</div>
                 ${failCount > 0 ? `<div class="error">❌ ${failCount} images failed to upload</div>` : ''}
                 <div>Click on images below to see detection results and bounding boxes.</div>
             `;
@@ -970,13 +1061,35 @@
             
             for (const image of images) {
                 try {
-                    // Get presigned URL for image
-                    const urlResponse = await fetch(`${API_BASE}/image/${encodeURIComponent(image.s3Key)}`);
-                    const urlData = await urlResponse.json();
+                    let imageUrl;
                     
-                    if (!urlData.success) continue;
+                    // If image already has a URL (from /api/images), use it
+                    if (image.url) {
+                        imageUrl = image.url;
+                        console.log('Using existing URL for image:', image.fileName || image.s3Key);
+                    } 
+                    // Otherwise, generate presigned URL (for newly uploaded images)
+                    else if (image.s3Key || image.fileName) {
+                        const s3Key = image.s3Key || image.fileName;
+                        console.log('Generating presigned URL for:', s3Key);
+                        
+                        const urlResponse = await fetch(`${API_BASE}/image/${encodeURIComponent(s3Key)}`);
+                        const urlData = await urlResponse.json();
+                        
+                        if (!urlData.success) {
+                            console.error('Failed to get presigned URL for:', s3Key, urlData);
+                            continue;
+                        }
+                        
+                        imageUrl = urlData.url;
+                    }
+                    // Skip if no way to get image URL
+                    else {
+                        console.error('No URL or s3Key found for image:', image);
+                        continue;
+                    }
                     
-                    const imageElement = createImageElement(image, urlData.url);
+                    const imageElement = createImageElement(image, imageUrl);
                     container.appendChild(imageElement);
                 } catch (error) {
                     console.error('Failed to load image:', error);
@@ -1012,6 +1125,51 @@
             }
         }
         
+        // Function to count faces that aren't within person bounding boxes
+        function countFacesOutsidePersonBoxes(personBoxes, faceBoxes) {
+            if (!personBoxes.length) {
+                // If no person boxes, all faces count as separate people
+                return faceBoxes.length;
+            }
+            
+            if (!faceBoxes.length) {
+                // If no faces, return 0
+                return 0;
+            }
+            
+            let facesOutsideCount = 0;
+            
+            // Check each face to see if it's inside any person box
+            faceBoxes.forEach(face => {
+                // Calculate face center point
+                const faceCenterX = face.Left + (face.Width / 2);
+                const faceCenterY = face.Top + (face.Height / 2);
+                
+                // Check if this face is inside any person box
+                let isInsideAnyPersonBox = false;
+                
+                for (const person of personBoxes) {
+                    // Check if face center is inside this person box
+                    if (
+                        faceCenterX >= person.Left && 
+                        faceCenterX <= (person.Left + person.Width) &&
+                        faceCenterY >= person.Top && 
+                        faceCenterY <= (person.Top + person.Height)
+                    ) {
+                        isInsideAnyPersonBox = true;
+                        break;
+                    }
+                }
+                
+                // If face is not inside any person box, count it as a separate person
+                if (!isInsideAnyPersonBox) {
+                    facesOutsideCount++;
+                }
+            });
+            
+            return facesOutsideCount;
+        }
+        
         function createImageElement(imageData, imageUrl) {
             const div = document.createElement('div');
             div.className = 'image-item';
@@ -1021,18 +1179,48 @@
             const boundingBoxes = rekognition.boundingBoxes || [];
             const faceBoxes = rekognition.faceBoxes || [];
             
-            // Count people based on actual person bounding boxes, not face count
-            const peopleCount = boundingBoxes.length;
+            // Count people based on person bounding boxes plus faces that aren't within person boxes
+            const personBoxCount = boundingBoxes.length;
             const faceCount = faceBoxes.length;
+            
+            // Calculate which faces are not within person bounding boxes
+            const facesOutsidePersonBoxes = countFacesOutsidePersonBoxes(boundingBoxes, faceBoxes);
+            
+            // Total people count = person boxes + faces outside person boxes
+            const totalPeopleCount = personBoxCount + facesOutsidePersonBoxes;
+            
+            // Determine processing status based on presence of rekognition data
+            let processingStatus = 'processing';
+            let statusBadge = '';
+            
+            // Check if image has been processed (has rekognition data or completed status)
+            const isProcessed = rekognition || imageData.processing_status === 'completed';
+            
+            if (isProcessed) {
+                // Image is processed, but check if any people were detected
+                const hasPeople = boundingBoxes && boundingBoxes.length > 0;
+                const hasFaces = faceBoxes && faceBoxes.length > 0;
+                
+                if (hasPeople || hasFaces) {
+                    statusBadge = '<div class="status-badge completed">✓ People Detected</div>';
+                } else {
+                    statusBadge = '<div class="status-badge completed">✓ No People Found</div>';
+                }
+            } else if (imageData.processing_status === 'failed') {
+                statusBadge = '<div class="status-badge failed">✗ Failed</div>';
+            } else {
+                statusBadge = '<div class="status-badge processing">⟳ Processing...</div>';
+            }
             
             div.innerHTML = `
                 <div class="image-container">
                     <img src="${imageUrl}" alt="${imageData.originalName}" 
                          onload="drawBoundingBoxes(this, ${JSON.stringify(boundingBoxes).replace(/"/g, '&quot;')}, ${JSON.stringify(faceBoxes).replace(/"/g, '&quot;')})">
+                    ${statusBadge}
                 </div>
                 <div class="image-info">
                     <strong>${imageData.originalName}</strong><br>
-                    👥 People detected: ${peopleCount}<br>
+                    👥 People detected: ${totalPeopleCount} (${personBoxCount} bodies + ${facesOutsidePersonBoxes} extra faces)<br>
                     😊 Faces detected: ${faceCount}<br>
                     📦 Total boxes: ${boundingBoxes.length + faceBoxes.length}
                 </div>
@@ -1128,9 +1316,50 @@
                 drawSingleBoundingBox(container, box, displayedWidth, displayedHeight, offsetX, offsetY, 'person');
             });
             
+            // Identify faces that are outside person bounding boxes
+            const facesOutside = [];
+            faceBoxes.forEach(face => {
+                // Calculate face center point
+                const faceCenterX = face.Left + (face.Width / 2);
+                const faceCenterY = face.Top + (face.Height / 2);
+                
+                // Check if this face is inside any person box
+                let isInsideAnyPersonBox = false;
+                
+                for (const person of boundingBoxes) {
+                    // Check if face center is inside this person box
+                    if (
+                        faceCenterX >= person.Left && 
+                        faceCenterX <= (person.Left + person.Width) &&
+                        faceCenterY >= person.Top && 
+                        faceCenterY <= (person.Top + person.Height)
+                    ) {
+                        isInsideAnyPersonBox = true;
+                        break;
+                    }
+                }
+                
+                // If face is not inside any person box, mark it
+                if (!isInsideAnyPersonBox) {
+                    facesOutside.push(face);
+                }
+            });
+            
             // Draw face bounding boxes with hover functionality
             faceBoxes.forEach((box, index) => {
-                const boxElement = drawSingleBoundingBox(container, box, displayedWidth, displayedHeight, offsetX, offsetY, 'face');
+                // Check if this face is outside any person box
+                const isOutsidePerson = facesOutside.includes(box);
+                
+                // Draw the face box with appropriate type
+                const boxElement = drawSingleBoundingBox(
+                    container, 
+                    box, 
+                    displayedWidth, 
+                    displayedHeight, 
+                    offsetX, 
+                    offsetY, 
+                    isOutsidePerson ? 'face-person' : 'face'
+                );
                 
                 // Add hover functionality for face zoom
                 boxElement.addEventListener('mouseenter', (e) => {
@@ -1154,15 +1383,20 @@
         }
         
         function drawSingleBoundingBox(container, box, displayedWidth, displayedHeight, offsetX, offsetY, type) {
-            const bbox = box.boundingBox;
+            // Fix: Access box properties directly, not box.boundingBox
+            const bbox = box; // The box already contains Left, Top, Width, Height
             const boxElement = document.createElement('div');
             boxElement.className = `bounding-box ${type}`;
+            
+            console.log('Drawing bounding box:', { type, bbox });
             
             // Calculate bounding box position and size
             const left = offsetX + (bbox.Left * displayedWidth);
             const top = offsetY + (bbox.Top * displayedHeight);
             const width = bbox.Width * displayedWidth;
             const height = bbox.Height * displayedHeight;
+            
+            console.log('Box positioning:', { left, top, width, height });
             
             boxElement.style.position = 'absolute';
             boxElement.style.left = left + 'px';
@@ -1174,7 +1408,25 @@
             const label = document.createElement('div');
             label.className = 'bounding-box-label';
             
-            if (type === 'face') {
+            if (type === 'face-person') {
+                const ageRange = box.ageRange || {};
+                const gender = box.gender || {};
+                const emotions = box.emotions || [];
+                
+                let labelText = `Person (Face) ${Math.round(box.confidence)}%`;
+                if (ageRange.Low && ageRange.High) {
+                    labelText += ` • ${ageRange.Low}-${ageRange.High}y`;
+                }
+                if (gender.Value) {
+                    labelText += ` • ${gender.Value}`;
+                }
+                if (emotions.length > 0) {
+                    labelText += ` • ${emotions[0].Type}`;
+                }
+                
+                label.textContent = labelText;
+            }
+            else if (type === 'face') {
                 const ageRange = box.ageRange || {};
                 const gender = box.gender || {};
                 const emotions = box.emotions || [];
@@ -1189,7 +1441,8 @@
                 
                 label.textContent = labelText;
             } else {
-                label.textContent = `${box.label} (${Math.round(box.confidence)}%)`;
+                // Fix: Use 'Person' instead of undefined box.label
+                label.textContent = `Person (${Math.round(box.confidence)}%)`;
             }
             
             boxElement.appendChild(label);
@@ -1206,9 +1459,15 @@
             const faceBoxes = rekognition.faceBoxes || [];
             const boundingBoxes = rekognition.boundingBoxes || [];
             
-            // Count people based on actual person bounding boxes
-            const peopleCount = boundingBoxes.length;
+            // Count people based on person bounding boxes plus faces that aren't within person boxes
+            const personBoxCount = boundingBoxes.length;
             const faceCount = faceBoxes.length;
+            
+            // Calculate which faces are not within person bounding boxes
+            const facesOutsidePersonBoxes = countFacesOutsidePersonBoxes(boundingBoxes, faceBoxes);
+            
+            // Total people count = person boxes + faces outside person boxes
+            const totalPeopleCount = personBoxCount + facesOutsidePersonBoxes;
             
             modalContent.innerHTML = `
                 <h2>${imageData.originalName}</h2>
@@ -1220,9 +1479,10 @@
                     <div>
                         <h3>🎯 Detection Results</h3>
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                            <p><strong>👥 People Count:</strong> ${peopleCount}</p>
-                            <p><strong>😊 Face Count:</strong> ${faceCount}</p>
-                            <p><strong>📦 Person Boxes:</strong> ${boundingBoxes.length}</p>
+                            <p><strong>👥 Total People:</strong> ${totalPeopleCount}</p>
+                            <p><strong>👤 Person Bodies:</strong> ${personBoxCount}</p>
+                            <p><strong>😊 Faces (total):</strong> ${faceCount}</p>
+                            <p><strong>🔍 Extra Faces:</strong> ${facesOutsidePersonBoxes} <small>(faces without visible bodies)</small></p>
                             <p><strong>🟢 Face Boxes:</strong> ${faceBoxes.length} <small>(hover to zoom)</small></p>
                             <p><strong>⏰ Processed:</strong> ${
                                 imageData.processed_at ? new Date(imageData.processed_at).toLocaleString() : 
@@ -1331,8 +1591,10 @@
                 console.log('Emotions not detected. Raw emotions:', emotions);
             }
             
-            // Use normalized coordinates directly
-            const bbox = faceBox.boundingBox;
+            // Fix: Use faceBox directly, not faceBox.boundingBox
+            const bbox = faceBox; // The faceBox already contains Left, Top, Width, Height
+            
+            console.log('Face zoom bbox:', bbox);
             
             // Calculate face center as percentage
             const faceCenterX = (bbox.Left + bbox.Width / 2) * 100;
@@ -1342,6 +1604,8 @@
             const faceWidth = bbox.Width * displayedWidth;
             const faceHeight = bbox.Height * displayedHeight;
             const faceSize = Math.max(faceWidth, faceHeight);
+            
+            console.log('Face zoom calculations:', { faceCenterX, faceCenterY, faceSize });
             
             // Calculate background-size based on face size
             let containerSize, backgroundSize;
@@ -1549,14 +1813,112 @@
             });
         }, 250));
         
-        // Initialize
+        // Smart refresh system for unprocessed images
+        const unprocessedImages = new Set();
+        let smartRefreshInterval = null;
+        let refreshCounter = 0;
+        const MAX_REFRESH_ATTEMPTS = 15; // Maximum number of refresh attempts (2.5 minutes at 10s intervals)
+        
+        function startSmartRefresh() {
+            if (smartRefreshInterval) {
+                clearInterval(smartRefreshInterval);
+            }
+            
+            refreshCounter = 0;
+            console.log('Starting smart refresh for unprocessed images');
+            
+            // Check every 10 seconds for unprocessed images
+            smartRefreshInterval = setInterval(() => {
+                refreshCounter++;
+                
+                // Stop after maximum attempts regardless of processing status
+                if (refreshCounter > MAX_REFRESH_ATTEMPTS) {
+                    console.log(`Refresh #${refreshCounter}: Maximum refresh attempts (${MAX_REFRESH_ATTEMPTS}) reached, stopping smart refresh`);
+                    clearInterval(smartRefreshInterval);
+                    smartRefreshInterval = null;
+                    unprocessedImages.clear(); // Clear the set to prevent future refresh attempts
+                    return;
+                }
+                
+                if (unprocessedImages.size === 0) {
+                    console.log(`Refresh #${refreshCounter}: No unprocessed images to check, stopping smart refresh`);
+                    clearInterval(smartRefreshInterval);
+                    smartRefreshInterval = null;
+                    return;
+                }
+                
+                console.log(`Refresh #${refreshCounter}: Checking ${unprocessedImages.size} unprocessed images`);
+                
+                loadExistingImages().then(() => {
+                    // After refresh, check if any images are still unprocessed
+                    const stillUnprocessed = new Set();
+                    
+                    unprocessedImages.forEach(imageId => {
+                        const image = uploadedImages.find(img => img.imageId === imageId);
+                        console.log(`Checking image ${imageId}:`, image ? 
+                            `status=${image.processing_status}, rekognition=${!!image.rekognition}` : 
+                            'not found');
+                        
+                        // Consider an image processed if:
+                        // 1. It exists in uploadedImages
+                        // 2. Either:
+                        //    a. It has rekognition data (regardless of whether it has bounding boxes)
+                        //    b. Its processing_status is 'completed'
+                        const isProcessed = image && 
+                                          (image.rekognition || image.processing_status === 'completed');
+                        
+                        if (!isProcessed) {
+                            stillUnprocessed.add(imageId);
+                            console.log(`Image ${imageId} still unprocessed: ${!image ? 'not found' : 'no rekognition data and status not completed'}`);
+                        } else {
+                            console.log(`Image ${imageId} is processed ${image.rekognition ? '(has rekognition data)' : '(status is completed)'}`);
+                        }
+                    });
+                    
+                    unprocessedImages.clear();
+                    stillUnprocessed.forEach(id => unprocessedImages.add(id));
+                    
+                    console.log(`Refresh #${refreshCounter}: ${unprocessedImages.size} images still processing`);
+                    
+                    if (unprocessedImages.size === 0) {
+                        console.log(`Refresh #${refreshCounter}: All images processed, stopping smart refresh`);
+                        clearInterval(smartRefreshInterval);
+                        smartRefreshInterval = null;
+                    }
+                });
+            }, 10000); // Check every 10 seconds
+        }
+        
+        // Track unprocessed images when displaying the gallery
+        const originalDisplayImageGallery = displayImageGallery;
+        displayImageGallery = function() {
+            originalDisplayImageGallery.apply(this, arguments);
+            
+            // Find unprocessed images
+            uploadedImages.forEach(image => {
+                if (image.imageId && (!image.processing_status || image.processing_status !== 'completed')) {
+                    unprocessedImages.add(image.imageId);
+                }
+            });
+            
+            // Start smart refresh if there are unprocessed images
+            if (unprocessedImages.size > 0 && !smartRefreshInterval) {
+                startSmartRefresh();
+            }
+        };
         document.addEventListener('DOMContentLoaded', () => {
             console.log('Page loaded, initializing...');
+            
+            // Load system info and images
             loadSystemInfo();
-            checkOverallHealth(); // Overall health for system info section
-            checkApiHealth(); // API health check for system info
-            checkHealth(); // Infrastructure status check
-            loadExistingImages(); // Load existing images from S3
+            loadExistingImages();
+            
+            // Run health checks in background without blocking
+            setTimeout(() => {
+                checkOverallHealth().catch(e => console.error('Overall health check failed:', e));
+                checkApiHealth().catch(e => console.error('API health check failed:', e));
+                checkHealth().catch(e => console.error('Infrastructure health check failed:', e));
+            }, 1000); // Small delay to let page load first
         });
         
         // Auto-refresh every 3000 seconds
@@ -1564,7 +1926,7 @@
             checkOverallHealth(); // Overall health for system info section
             checkApiHealth(); // API health check for system info
             checkHealth(); // Infrastructure status check
-        }, 3000000);
+        }, 3000);
     </script>
 </body>
 </html>

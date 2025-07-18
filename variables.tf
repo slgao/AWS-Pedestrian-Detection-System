@@ -13,13 +13,13 @@ variable "gitlab_repo_url" {
 variable "bastion_use_amazon_linux_2023" {
   description = "Whether bastion host should use Amazon Linux 2023 (true) or Amazon Linux 2 (false)"
   type        = bool
-  default     = false  # AL2 for compatibility with amazon-linux-extras
+  default     = false # AL2 for compatibility with amazon-linux-extras
 }
 
 variable "frontend_use_amazon_linux_2023" {
   description = "Whether frontend instances should use Amazon Linux 2023 (true) or Amazon Linux 2 (false)"
   type        = bool
-  default     = true   # AL2023 for modern applications
+  default     = true # AL2023 for modern applications
 }
 
 variable "vpc_cidr" {

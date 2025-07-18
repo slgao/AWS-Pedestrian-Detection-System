@@ -20,7 +20,13 @@ output "rds_endpoint" {
 }
 
 output "alb_dns_name" {
-  value = module.load_balancer.alb_dns_name
+  description = "DNS name of the Application Load Balancer"
+  value       = module.load_balancer.alb_dns_name
+}
+
+output "nat_gateway_ip" {
+  description = "Public IP of the NAT Gateway for Lambda internet access"
+  value       = module.route_table.nat_gateway_eip
 }
 
 output "sns_topic_arn" {

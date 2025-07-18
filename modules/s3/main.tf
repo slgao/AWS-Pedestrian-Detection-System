@@ -11,8 +11,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   topic {
     topic_arn     = var.sns_topic_arn
     events        = ["s3:ObjectCreated:*"]
-    filter_prefix = "Uploads/"
-    filter_suffix = ".jpg"
+    filter_prefix = "uploads/" # Match the Flask app upload path
   }
   depends_on = [aws_sns_topic_policy.s3_publish]
 }

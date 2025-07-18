@@ -1,7 +1,7 @@
 {
-  "name": "aws-3tier-demo",
+  "name": "aws-n-tier-demo",
   "version": "1.0.0",
-  "description": "Simple HTML/CSS/JS frontend for AWS 3-tier architecture demo",
+  "description": "Simple HTML/CSS/JS frontend for AWS n-tier architecture demo",
   "main": "index.html",
   "scripts": {
     "build": "echo 'No build step needed - static HTML' && mkdir -p build && cp -r * build/",

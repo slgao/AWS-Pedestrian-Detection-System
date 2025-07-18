@@ -304,5 +304,54 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to log processing event: {e}")
 
+    def get_processing_status(self, image_id):
+        """Get processing status for a specific image"""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT processing_status, processed_at, upload_time
+                        FROM images 
+                        WHERE id = %s
+                    """, (image_id,))
+                    
+                    result = cursor.fetchone()
+                    if result:
+                        return {
+                            'processing_status': result[0],
+                            'processed_at': result[1],
+                            'upload_time': result[2]
+                        }
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Error getting processing status: {e}")
+            return None
+
+    def update_processing_status(self, image_id, status, processed_at=None):
+        """Update processing status for an image"""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    if processed_at:
+                        cursor.execute("""
+                            UPDATE images 
+                            SET processing_status = %s, processed_at = %s
+                            WHERE id = %s
+                        """, (status, processed_at, image_id))
+                    else:
+                        cursor.execute("""
+                            UPDATE images 
+                            SET processing_status = %s
+                            WHERE id = %s
+                        """, (status, image_id))
+                    
+                    conn.commit()
+                    logger.info(f"Updated processing status for image {image_id}: {status}")
+                    
+        except Exception as e:
+            logger.error(f"Error updating processing status: {e}")
+            raise
+
 # Global database manager instance
 db_manager = DatabaseManager()

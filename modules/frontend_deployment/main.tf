@@ -23,28 +23,23 @@ locals {
 
 # Launch template for frontend instances
 resource "aws_launch_template" "frontend_app" {
-  name                   = "frontend-app-launch-template"
-  image_id               = var.use_amazon_linux_2023 ? module.ami_data.amazon_linux_2023_id : module.ami_data.amazon_linux_2_id
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  vpc_security_group_ids = var.security_group_ids
-  user_data              = local.user_data_script
+  name          = "frontend-app-launch-template"
+  image_id      = var.use_amazon_linux_2023 ? module.ami_data.amazon_linux_2023_id : module.ami_data.amazon_linux_2_id
+  instance_type = var.instance_type
+  key_name      = var.key_name
+  user_data     = local.user_data_script
+
+  # Configure network interface with security groups and disable public IP
+  network_interfaces {
+    associate_public_ip_address = false
+    security_groups             = var.security_group_ids
+    device_index                = 0  # Primary network interface
+  }
 
   # Add IAM instance profile for AWS service access
   iam_instance_profile {
     name = "LabInstanceProfile"
   }
-
-  # # Increase EBS volume size to accommodate dependencies
-  # block_device_mappings {
-  #   device_name = "/dev/xvda"
-  #   ebs {
-  #     volume_size           = 20  # GB (increased from default 8GB)
-  #     volume_type           = "gp3"
-  #     delete_on_termination = true
-  #     encrypted             = true
-  #   }
-  # }
 
   tag_specifications {
     resource_type = "instance"

@@ -35,25 +35,31 @@ resource "aws_security_group" "frontend" {
   name   = "frontend-sg"
   vpc_id = var.vpc_id
 
+  # Allow SSH access from bastion host only
   ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [local.my_ip]
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion.id]
+    description     = "SSH access from bastion host"
   }
 
+  # Allow HTTP traffic from ALB only
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+    description     = "HTTP traffic from ALB"
   }
 
+  # Allow Flask backend traffic from ALB only
   ingress {
-    from_port   = 5000		# Flask backend
-    to_port     = 5000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 5000
+    to_port         = 5000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+    description     = "Flask backend traffic from ALB"
   }
 
   egress {
@@ -105,11 +111,13 @@ resource "aws_security_group" "alb" {
     description = "Allow traffic from the internet on port 80"
   }
 
+  # Use a general egress rule instead of security group references
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = {
@@ -141,6 +149,18 @@ resource "aws_security_group" "rds" {
     to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.backend.id]
+  }
+
+  # Allow Lambda access to RDS
+  dynamic "ingress" {
+    for_each = var.lambda_security_group_id != "" ? [1] : []
+    content {
+      description     = "MySQL access from Lambda"
+      from_port       = 3306
+      to_port         = 3306
+      protocol        = "tcp"
+      security_groups = [var.lambda_security_group_id]
+    }
   }
 
   egress {

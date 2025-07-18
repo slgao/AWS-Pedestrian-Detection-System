@@ -9,7 +9,7 @@ resource "aws_instance" "bastion" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [var.security_group_id]
   key_name               = var.key_name
-  user_data = base64encode(templatefile("${path.module}/../../scripts/bastion_setup.sh", {
+  user_data_base64 = base64encode(templatefile("${path.module}/../../scripts/bastion_setup.sh", {
     rds_endpoint = var.rds_endpoint
     db_username  = var.db_username
     db_password  = var.db_password
@@ -18,7 +18,7 @@ resource "aws_instance" "bastion" {
     wp_username  = var.wp_username
     wp_password  = var.wp_password
   }))
-tags = {
-  Name = "bastion-host"
-}
+  tags = {
+    Name = "bastion-host"
+  }
 }
