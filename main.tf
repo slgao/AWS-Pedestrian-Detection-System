@@ -94,6 +94,14 @@ module "load_balancer" {
   security_group_id = module.security_group.alb_sg_id
 }
 
+# Add CloudFront distribution for HTTPS
+module "cloudfront" {
+  source       = "./modules/cloudfront"
+  alb_dns_name = module.load_balancer.alb_dns_name
+  
+  depends_on = [module.load_balancer]
+}
+
 module "rds" {
   source                 = "./modules/rds"
   subnet_ids             = module.subnet.private_subnet_ids

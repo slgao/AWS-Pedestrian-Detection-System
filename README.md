@@ -6,7 +6,7 @@
 
 A highly available, scalable cloud-native application that detects pedestrians and faces in images using AWS services including S3, SNS, Lambda, RDS, EC2, and Rekognition.
 
-![Architecture Diagram](https://via.placeholder.com/800x400?text=N-Tier+Detection+System+Architecture)
+![Architecture Diagram](./assets/N-Tier_Architecture.drawio.svg)
 
 ## 🌟 Features
 
@@ -39,6 +39,13 @@ The application follows a modern N-Tier architecture with event-driven processin
 - Nginx proxy for routing requests
 - Presigned URL generation for secure image access
 
+### Content Delivery Layer (HTTPS Security)
+- CloudFront distribution provides secure HTTPS access
+- Uses CloudFront's default SSL certificate (no custom domain required)
+- Redirects HTTP requests to HTTPS automatically
+- Global content delivery with edge location caching
+- Built-in DDoS protection with AWS Shield Standard
+
 ### Processing Layer (Event-Driven Tier)
 - Amazon S3 event notifications trigger SNS topics
 - SNS topic acts as a publisher for the event-driven architecture
@@ -54,7 +61,7 @@ The application follows a modern N-Tier architecture with event-driven processin
 
 ## 🔄 System Workflow
 
-1. **Image Upload**: User uploads an image through the frontend interface
+1. **Image Upload**: User uploads an image through the frontend interface (via HTTPS)
 2. **Storage**: Frontend API stores the image in an S3 bucket
 3. **Event Notification**: S3 triggers an event notification to an SNS topic
 4. **Processing**: Lambda function subscribed to the SNS topic processes the image
@@ -151,7 +158,31 @@ chmod 400 detection-system-key.pem
 aws s3 mb s3://detection-system-images-$(date +%s)
 ```
 
-### Step 4: Configure Terraform Variables
+### Step 4: Prepare Lambda Function Package
+
+The Lambda function requires a deployment package with all necessary dependencies. Use the provided script to create it:
+
+```bash
+# Navigate to the Lambda function directory
+cd modules/lambda_rekognition
+
+# Make the script executable
+chmod +x create_compatible_package.sh
+
+# Run the script to create the Lambda deployment package
+./create_compatible_package.sh
+
+# Return to the project root directory
+cd ../..
+```
+
+This script will:
+- Install required dependencies with Linux compatibility
+- Package everything into a zip file ready for Lambda deployment
+- Handle platform-specific requirements for cryptography libraries
+- Verify the package contents
+
+### Step 5: Configure Terraform Variables
 
 Create a `terraform.tfvars` file with your specific values:
 
@@ -171,14 +202,19 @@ db_password = "YourSecurePassword123!"
 
 ### Step 6: Access the Application
 
-After successful deployment, you can access the application using the ALB DNS name provided in the Terraform outputs:
+After successful deployment, you can access the application using two URLs:
 
 ```bash
-# Get the ALB DNS name
+# Get the ALB DNS name (HTTP)
 terraform output alb_dns_name
+
+# Get the CloudFront HTTPS URL
+terraform output cloudfront_https_url
 ```
 
-Open the ALB DNS name in your web browser to access the N-Tier Detection System.
+Open the CloudFront HTTPS URL in your web browser to access the N-Tier Detection System securely.
+
+**Note**: CloudFront distribution deployment may take 15-30 minutes to complete. During this time, the HTTPS URL may not be immediately available.
 
 ## 🔧 Using the Application
 
