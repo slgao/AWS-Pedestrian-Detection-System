@@ -7,9 +7,9 @@
 A highly available, scalable cloud-native application that detects pedestrians and faces in images using AWS services including S3, SNS, Lambda, RDS, EC2, and Rekognition.
 
 ![Architecture Diagram](./assets/N-Tier_Architecture.drawio.svg)
-![Pedestrian Detection System Demo](./webapp-screenshots/webapp-demo.png)
-![Image 1](./webapp-screenshots/frontend_detection_details1.png)
-![Image 2](./webapp-screenshots/Nevsky avenue St. Petersburg_detection_details_face.png)
+![Pedestrian Detection System Demo](./assets/webapp-screenshots/webapp-demo.png)
+![Demo 1](./assets/webapp-screenshots/frontend_detection_details1.png)
+![Demo 2](./assets/webapp-screenshots/Nevsky_avenue_St._Petersburg_detection_details_face.png)
 
 ## 🌟 Features
 
