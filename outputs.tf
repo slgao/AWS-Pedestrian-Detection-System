@@ -20,7 +20,23 @@ output "rds_endpoint" {
 }
 
 output "alb_dns_name" {
-  value = module.load_balancer.alb_dns_name
+  description = "DNS name of the Application Load Balancer"
+  value       = module.load_balancer.alb_dns_name
+}
+
+output "cloudfront_domain_name" {
+  description = "The domain name of the CloudFront distribution"
+  value       = module.cloudfront.cloudfront_domain_name
+}
+
+output "cloudfront_https_url" {
+  description = "The HTTPS URL of the CloudFront distribution"
+  value       = module.cloudfront.cloudfront_https_url
+}
+
+output "nat_gateway_ip" {
+  description = "Public IP of the NAT Gateway for Lambda internet access"
+  value       = module.route_table.nat_gateway_eip
 }
 
 output "sns_topic_arn" {

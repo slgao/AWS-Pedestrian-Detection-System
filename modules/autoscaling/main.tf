@@ -7,10 +7,10 @@ resource "aws_autoscaling_group" "frontend" {
     id      = var.launch_template_id
     version = "$Latest"
   }
-  vpc_zone_identifier       = var.subnet_ids
+  vpc_zone_identifier       = var.subnet_ids  # Now using private subnets
   target_group_arns         = [var.target_group_arn]
   health_check_type         = "ELB"
-  health_check_grace_period = 100 # seconds, default 300
+  health_check_grace_period = 300 # seconds, default 300
   tag {
     key                 = "Name"
     value               = "frontend-instance"
@@ -26,6 +26,6 @@ resource "aws_autoscaling_policy" "cpu" {
     predefined_metric_specification {
       predefined_metric_type = "ASGAverageCPUUtilization"
     }
-    target_value = 70.0	# 70
+    target_value = 70.0 # 70
   }
 }

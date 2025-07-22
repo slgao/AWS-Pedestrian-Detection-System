@@ -6,13 +6,25 @@ resource "aws_s3_bucket_ownership_controls" "image_bucket" {
   }
 }
 
+# Add CORS configuration to allow requests from CloudFront
+resource "aws_s3_bucket_cors_configuration" "image_bucket" {
+  bucket = var.bucket_name
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "HEAD", "PUT", "POST", "DELETE"]
+    allowed_origins = ["*"] # In production, restrict to specific domains
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = var.bucket_name
   topic {
     topic_arn     = var.sns_topic_arn
     events        = ["s3:ObjectCreated:*"]
-    filter_prefix = "Uploads/"
-    filter_suffix = ".jpg"
+    filter_prefix = "uploads/" # Match the Flask app upload path
   }
   depends_on = [aws_sns_topic_policy.s3_publish]
 }

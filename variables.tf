@@ -4,6 +4,24 @@ variable "region" {
   default     = "us-west-2"
 }
 
+variable "gitlab_repo_url" {
+  description = "GitLab repository URL for the React app"
+  type        = string
+}
+
+# AMI Selection Variables
+variable "bastion_use_amazon_linux_2023" {
+  description = "Whether bastion host should use Amazon Linux 2023 (true) or Amazon Linux 2 (false)"
+  type        = bool
+  default     = false # AL2 for compatibility with amazon-linux-extras
+}
+
+variable "frontend_use_amazon_linux_2023" {
+  description = "Whether frontend instances should use Amazon Linux 2023 (true) or Amazon Linux 2 (false)"
+  type        = bool
+  default     = true # AL2023 for modern applications
+}
+
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"
   type        = string
