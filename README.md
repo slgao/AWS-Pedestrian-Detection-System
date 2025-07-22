@@ -142,23 +142,22 @@ In AWS Sandbox Lab environments:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/n-tier-detection-system.git
-cd n-tier-detection-system
+git clone https://github.com/slgao/neuefische-AWS-CCB.git
+cd neuefische-AWS-CCB/aws-capstone-project
 ```
 
 ### Step 2: Create EC2 Key Pair
 
 ```bash
 # Create a key pair for EC2 instances
-aws ec2 create-key-pair --key-name detection-system-key --query 'KeyMaterial' --output text > detection-system-key.pem
-chmod 400 detection-system-key.pem
+./ec2_create_key_pair.sh
 ```
 
 ### Step 3: Create S3 Bucket for Image Storage
 
 ```bash
 # Create a unique S3 bucket for image storage
-aws s3 mb s3://detection-system-images-$(date +%s)
+./s3_create.sh
 ```
 
 ### Step 4: Prepare Lambda Function Package
@@ -187,7 +186,7 @@ This script will:
 
 ### Step 5: Configure Terraform Variables
 
-Create a `terraform.tfvars` file with your specific values:
+Create a `terraform.tfvars` file according to the `terraform.tfvars.example` with your specific values:
 
 ```hcl
 region = "us-west-2"
@@ -245,10 +244,13 @@ To access the system via the bastion host:
 
 ```bash
 # Connect to bastion host
-ssh -i detection-system-key.pem ec2-user@<bastion-public-ip>
+./ec2_connect.sh <bastion-public-ip>
 
-# From bastion, connect to frontend instances
-ssh -i ~/.ssh/id_rsa ec2-user@<frontend-private-ip>
+# From bastion, connect to frontend instances, you need to copy the private key from local to the bastion host
+./scp_pem.sh <bastion-public-ip>
+# Connect to bastion host
+./ec2_connect.sh <bastion-public-ip>
+ssh -i labsuser.pem ec2-user@<frontend-private-ip>
 ```
 
 ## 🔍 Technical Details
