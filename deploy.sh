@@ -37,7 +37,7 @@ print_success "terraform.tfvars found"
 
 # Initialize and deploy
 print_status "Initializing Terraform..."
-terraform init
+terraform init -upgrade
 
 print_status "Validating configuration..."
 terraform validate
